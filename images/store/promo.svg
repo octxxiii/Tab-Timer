@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1280" height="800" viewBox="0 0 1280 800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="800" fill="#2196f3"/>
+  <circle cx="400" cy="400" r="200" fill="white" opacity="0.1"/>
+  <circle cx="880" cy="400" r="200" fill="white" opacity="0.1"/>
+  
+  <!-- Clock Icon -->
+  <circle cx="640" cy="350" r="150" fill="white"/>
+  <path d="M640 250 L640 350 L740 350" stroke="#2196f3" stroke-width="20" stroke-linecap="round"/>
+  
+  <!-- Text -->
+  <text x="640" y="600" font-family="Arial" font-size="60" fill="white" text-anchor="middle" font-weight="bold">
+    Tab Timer
+  </text>
+  <text x="640" y="680" font-family="Arial" font-size="40" fill="white" text-anchor="middle">
+    Track Your Browser Time &amp; Boost Productivity
+  </text>
+</svg> 

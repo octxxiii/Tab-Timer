@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Tab Timer",
-  "version": "1.0",
-  "description": "Track your tab usage time and boost productivity",
+  "version": "1.0.0",
+  "description": "Track your browser time and boost productivity. See how much time you spend on each website and improve your focus.",
   "permissions": ["tabs", "storage"],
   "background": {
     "service_worker": "background.js"
@@ -19,5 +19,10 @@
     "16": "images/icon16.png",
     "48": "images/icon48.png",
     "128": "images/icon128.png"
-  }
+  },
+  "author": "Your Name",
+  "homepage_url": "https://octxxiii.github.io/tab-timer",
+  "short_name": "Tab Timer",
+  "offline_enabled": true,
+  "minimum_chrome_version": "88"
 } 
