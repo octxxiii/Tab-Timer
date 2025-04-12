@@ -1,14 +1,16 @@
 {
-  "name": "newage-extension",
+  "name": "tab-timer",
   "version": "1.0.0",
   "description": "Chrome extension for time management",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "build": "cp -r website/* dist/",
+    "prebuild": "mkdir -p dist"
   },
   "devDependencies": {
     "jest": "^29.7.0",
     "jest-puppeteer": "^9.0.2",
-    "puppeteer": "^21.11.0"
+    "puppeteer": "^21.0.0"
   },
   "main": "background.js",
   "directories": {
