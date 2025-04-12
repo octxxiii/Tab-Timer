@@ -25,8 +25,14 @@ jobs:
 
       - name: Build
         run: |
+          echo "Current directory: $(pwd)"
+          echo "Listing website directory:"
+          ls -la website/
           mkdir -p dist
-          cp -r website/* dist/
+          echo "Copying files from website to dist..."
+          cp -rv website/* dist/
+          echo "Contents of dist directory:"
+          ls -la dist/
 
       - name: Deploy to Pages repo
         uses: peaceiris/actions-gh-pages@v3
