@@ -47,7 +47,7 @@ jobs:
           external_repository: octxxiii/tab-timer-pages
           publish_branch: gh-pages
           publish_dir: ./dist
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           user_name: octxxiii
           user_email: octxxiii@users.noreply.github.com
           commit_message: "Deploy: ${{ github.event.head_commit.message }}"
