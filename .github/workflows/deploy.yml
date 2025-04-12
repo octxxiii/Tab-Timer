@@ -1,0 +1,34 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]  # 또는 master, 사용 중인 브랜치로 변경
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'  # 네 프로젝트에 맞게 조정
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
+
+      - name: Deploy to Pages repo
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          external_repository: octxxiii/tab-timer-pages
+          publish_branch: gh-pages
+          publish_dir: ./dist
+          user_name: octxxiii
+          user_email: octxxiii@users.noreply.github.com
+          personal_token: ${{ secrets.PERSONAL_TOKEN }}
