@@ -1,141 +1,64 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tab Timer - Track Your Browser Time</title>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 0;
-            color: #333;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        header {
-            background: #2196f3;
-            color: white;
-            padding: 20px 0;
-            text-align: center;
-        }
-        .hero {
-            text-align: center;
-            padding: 40px 0;
-        }
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            padding: 40px 0;
-        }
-        .feature-card {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .cta {
-            text-align: center;
-            padding: 40px 0;
-            background: #e3f2fd;
-        }
-        .download-btn {
-            display: inline-block;
-            background: #2196f3;
-            color: white;
-            padding: 15px 30px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: bold;
-            margin-top: 20px;
-        }
-        footer {
-            text-align: center;
-            padding: 20px;
-            background: #333;
-            color: white;
-        }
-        .ad-container {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            background: #f5f5f5;
-            border-radius: 8px;
-            text-align: center;
-        }
-    </style>
+    <title>Tab Timer - 시간 관리 대시보드</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1>Tab Timer</h1>
-            <p>Track your browser time and boost productivity</p>
-        </div>
-    </header>
-
     <div class="container">
-        <section class="hero">
-            <h2>Know Where Your Time Goes</h2>
-            <p>Tab Timer helps you understand your browsing habits and improve your productivity</p>
-        </section>
+        <header>
+            <h1>Tab Timer 대시보드</h1>
+            <nav>
+                <ul>
+                    <li><a href="#daily">일간 통계</a></li>
+                    <li><a href="#weekly">주간 통계</a></li>
+                    <li><a href="#goals">목표 설정</a></li>
+                </ul>
+            </nav>
+        </header>
 
-        <!-- AdSense Ad -->
-        <div class="ad-container">
-            <ins class="adsbygoogle"
-                 style="display:block"
-                 data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-                 data-ad-slot="XXXXXXXXXX"
-                 data-ad-format="auto"></ins>
-            <script>
-                 (adsbygoogle = window.adsbygoogle || []).push({});
-            </script>
-        </div>
+        <main>
+            <section id="daily" class="dashboard-section">
+                <h2>일간 통계</h2>
+                <div class="chart-container">
+                    <canvas id="dailyChart"></canvas>
+                </div>
+            </section>
 
-        <section class="features">
-            <div class="feature-card">
-                <h3>Time Tracking</h3>
-                <p>Automatically track time spent on each website</p>
-            </div>
-            <div class="feature-card">
-                <h3>Daily Stats</h3>
-                <p>View your daily browsing statistics</p>
-            </div>
-            <div class="feature-card">
-                <h3>Productivity Boost</h3>
-                <p>Identify time-wasting websites and improve focus</p>
-            </div>
-        </section>
+            <section id="weekly" class="dashboard-section">
+                <h2>주간 통계</h2>
+                <div class="chart-container">
+                    <canvas id="weeklyChart"></canvas>
+                </div>
+            </section>
 
-        <section class="cta">
-            <h2>Ready to Boost Your Productivity?</h2>
-            <a href="https://chrome.google.com/webstore/detail/tab-timer/YOUR_EXTENSION_ID" class="download-btn">
-                Add to Chrome - It's Free
-            </a>
-        </section>
+            <section id="goals" class="dashboard-section">
+                <h2>목표 설정</h2>
+                <div class="goals-container">
+                    <form id="goalForm">
+                        <div class="form-group">
+                            <label for="website">웹사이트</label>
+                            <input type="text" id="website" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="timeLimit">시간 제한 (분)</label>
+                            <input type="number" id="timeLimit" min="1" required>
+                        </div>
+                        <button type="submit">목표 설정</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>© 2025 Tab Timer. All rights reserved.</p>
+        </footer>
     </div>
 
-    <footer>
-        <div class="container">
-            <p>&copy; 2024 Tab Timer. All rights reserved.</p>
-        </div>
-    </footer>
-
-    <!-- Bottom AdSense Ad -->
-    <div class="ad-container">
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-             data-ad-slot="XXXXXXXXXX"
-             data-ad-format="auto"></ins>
-        <script>
-             (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
-    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="dashboard.js"></script>
 </body>
 </html> 

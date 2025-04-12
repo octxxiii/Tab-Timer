@@ -1,73 +1,78 @@
-# 🕒 Tab Timer Chrome 확장 프로그램
+# Tab Timer
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-coming%20soon-orange)
+![Tab Timer Logo](images/icon128.png)
 
-당신의 브라우저 사용 시간을 추적하고 생산성을 높여주는 도구입니다.
+> "당신의 시간을 자동으로 기록하고, 더 나은 습관을 만듭니다."
 
-## ✨ 주요 기능
-- 🌐 웹사이트별 자동 시간 추적
-- 📊 일일 통계 및 인사이트
-- 🎯 생산성 분석
-- 💎 프리미엄 기능 (출시 예정)
-  - 상세 분석
-  - 주간 리포트
-  - 데이터 내보내기
-  - 맞춤 목표 설정
+## 프로젝트 개요
 
-## 🚀 설치 방법
-1. Chrome 웹 스토어에서 다운로드 (출시 예정)
-2. "Chrome에 추가" 클릭
-3. 브라우저 사용 시간 추적 시작!
+Tab Timer는 사용자의 웹 사용 습관을 개선하기 위해 개발된 Chrome 확장 프로그램 기반 시간 추적 시스템입니다.
 
-## 💻 개발 환경 설정
-로컬에서 실행하는 방법:
-1. 저장소 클론
-2. Chrome에서 `chrome://extensions/` 접속
-3. "개발자 모드" 활성화
-4. "압축해제된 확장 프로그램을 로드합니다" 클릭 후 확장 프로그램 디렉토리 선택
+### 주요 기능
 
-## 📁 프로젝트 구조
-```
-tab-timer/
-├── manifest.json          # 확장 프로그램 설정
-├── background.js          # 백그라운드 서비스 워커
-├── popup.html            # 확장 프로그램 팝업 UI
-├── popup.js              # 팝업 기능
-├── images/               # 아이콘
-│   ├── icon.svg
-│   └── store/           # 스토어 에셋
-└── website/             # 랜딩 페이지
-    ├── index.html
-    └── privacy.html
-```
+- 웹사이트 접속 시 자동으로 체류 시간 추적
+- 사용자가 설정한 시간 초과 시 알림
+- 일간/주간 통계 시각화 (개발 중)
+- 사용자별 목표 시간 설정 (개발 예정)
 
-## 🔒 개인정보처리방침
-개인정보 보호는 매우 중요합니다. [개인정보처리방침](https://octxxiii.github.io/tab-timer/privacy.html)을 확인하세요.
+### 기술 스택
 
-## 🌐 웹사이트
-공식 웹사이트: https://octxxiii.github.io/tab-timer
+- **브라우저 확장**: JavaScript, Chrome API
+- **UI 구성**: HTML/CSS, Material Icons
+- **빌드 시스템**: pnpm, Vite
+- **웹 대시보드**: GitHub Pages (정적 배포), React (예정)
+- **앱**: Flutter (예정)
+- **백엔드**: Firebase or Supabase (예정)
 
-## 🤝 기여하기
-기여는 언제나 환영합니다! Pull Request를 보내주세요.
+## 설치 방법
 
-## 📄 라이선스
-이 프로젝트는 MIT 라이선스를 따릅니다. 자세한 내용은 LICENSE 파일을 참조하세요.
+1. Chrome 웹 스토어에서 설치 (준비 중)
+2. 또는 개발자 모드에서 로컬 설치:
+   - `chrome://extensions/` 접속
+   - 개발자 모드 활성화
+   - "압축해제된 확장 프로그램을 로드합니다" 클릭
+   - 프로젝트 폴더 선택
 
-## 🗺️ 개발 로드맵
-- [x] 기본 시간 추적
-- [x] 일일 통계
-- [x] 웹사이트 통합
-- [ ] 프리미엄 기능
-- [ ] 모바일 앱
-- [ ] API 통합
+## 사용 방법
 
-## 📞 연락처
-질문이나 제안사항이 있으시면 [이메일](mailto:kdyw123@gmail.com)로 연락주세요.
+1. 확장 프로그램 아이콘 클릭
+2. 시간 제한 설정 (선택사항)
+3. 웹 서핑 시작 - 자동으로 시간이 추적됩니다
+4. 설정한 시간 초과 시 알림 표시
 
----
+## 개발 계획
 
-<div align="center">
-  <sub>Built with ❤️ by Tab Timer Team</sub>
-</div> 
+### 2025 Q2 ~ Q3
+- 일간/주간 통계 차트 구현
+- 사용자별 목표 시간 설정 기능
+- 데이터 정제 및 내보내기 기능
+
+### 2025 Q3 ~ Q4
+- Firebase 연동
+- Flutter 기반 앱 베타 개발
+- Android 앱 출시
+
+### 2026 Q1
+- iOS 앱 개발
+- 프리미엄 기능 도입
+  - 고급 분석
+  - 집중 모드
+  - 습관 개선 AI 리포트
+
+## 기여하기
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 라이센스
+
+이 프로젝트는 MIT 라이센스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
+
+## 연락처
+
+프로젝트 팀장 - [@octxxiii](https://github.com/octxxiii)
+
+프로젝트 링크: [https://github.com/octxxiii/tab-timer](https://github.com/octxxiii/tab-timer) 
