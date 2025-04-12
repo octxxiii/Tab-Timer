@@ -3,7 +3,7 @@
   "name": "Tab Timer",
   "version": "1.0.0",
   "description": "Track your browser time and boost productivity. See how much time you spend on each website and improve your focus.",
-  "permissions": ["tabs", "storage"],
+  "permissions": ["tabs", "storage", "notifications"],
   "background": {
     "service_worker": "background.js"
   },

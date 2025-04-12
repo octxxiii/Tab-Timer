@@ -52,6 +52,34 @@
     .premium-btn:hover {
       background: #1976d2;
     }
+    .time-limit {
+      margin-top: 10px;
+      padding: 10px;
+      background: #fff3e0;
+      border-radius: 4px;
+    }
+    .time-limit-input {
+      display: flex;
+      gap: 10px;
+      margin-top: 5px;
+    }
+    input[type="number"] {
+      width: 60px;
+      padding: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1976d2;
+    }
   </style>
 </head>
 <body>
@@ -62,6 +90,15 @@
       <h3>Today's Stats</h3>
       <p>Total Time: <span id="totalTime">0h 0m</span></p>
       <p>Most Used: <span id="mostUsed">-</span></p>
+    </div>
+    
+    <div class="time-limit">
+      <h3>시간 제한 설정</h3>
+      <div class="time-limit-input">
+        <input type="number" id="timeLimitMinutes" min="1" placeholder="분">
+        <button id="setTimeLimit">설정</button>
+      </div>
+      <div id="currentLimit"></div>
     </div>
     
     <!-- AdSense Ad -->

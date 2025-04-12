@@ -111,6 +111,31 @@ document.addEventListener('DOMContentLoaded', () => {
     window.open('https://your-payment-processor.com/premium-upgrade', '_blank');
   });
 
+  // 시간 제한 설정
+  document.getElementById('setTimeLimit').addEventListener('click', () => {
+    const minutes = document.getElementById('timeLimitMinutes').value;
+    if (minutes && minutes > 0) {
+      chrome.runtime.sendMessage({ action: 'setTimeLimit', minutes: parseInt(minutes) }, (response) => {
+        updateCurrentLimit();
+      });
+    }
+  });
+
+  // 현재 시간 제한 표시
+  function updateCurrentLimit() {
+    chrome.runtime.sendMessage({ action: 'getTimeLimit' }, (response) => {
+      const currentLimit = document.getElementById('currentLimit');
+      if (response && response.minutes) {
+        currentLimit.textContent = `현재 설정: ${response.minutes}분`;
+      } else {
+        currentLimit.textContent = '시간 제한이 설정되지 않았습니다.';
+      }
+    });
+  }
+
+  // 페이지 로드 시 현재 시간 제한 표시
+  updateCurrentLimit();
+
   // Update UI every second
   updateUI();
   setInterval(updateUI, 1000);
