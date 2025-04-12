@@ -9,23 +9,32 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Checkout source
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: '16'
+          node-version: '18'
 
       - name: Install dependencies
         run: npm install
 
       - name: Build
-        run: npm run build
+        run: |
+          mkdir -p dist
+          cp -r website/* dist/
 
-      - name: Deploy
+      - name: Deploy to Pages repo
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          external_repository: octxxiii/tab-timer-pages
+          publish_branch: gh-pages
           publish_dir: ./dist
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          user_name: octxxiii
+          user_email: octxxiii@users.noreply.github.com
+          commit_message: "Deploy: ${{ github.event.head_commit.message }}"
