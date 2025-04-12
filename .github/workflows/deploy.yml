@@ -30,7 +30,7 @@ jobs:
           ls -la website/
           mkdir -p dist
           echo "Copying files from website to dist..."
-          cp -rv website/* dist/
+          cp -r website/* dist/
           echo "Contents of dist directory:"
           ls -la dist/
 
