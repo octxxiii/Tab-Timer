@@ -64,7 +64,7 @@ tab-timer/
 - [ ] API 통합
 
 ## 📞 연락처
-질문이나 제안사항이 있으시면 [이메일](mailto:your-email@example.com)로 연락주세요.
+질문이나 제안사항이 있으시면 [이메일](mailto:kdyw123@gmail.com)로 연락주세요.
 
 ---
 
