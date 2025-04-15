@@ -55,8 +55,8 @@ Tab Timer는 웹 브라우저에서 각 사이트별 사용 시간을 추적하�
 이 프로젝트는 MIT 라이선스를 따릅니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
 
 ## 연락처
-- 이메일: [your-email@example.com](mailto:your-email@example.com)
-- 웹사이트: [https://octxxiii.github.io/tab-timer](https://octxxiii.github.io/tab-timer)
+- 이메일: [kdyw123@gmail.com](kdyw123@gmail.com)
+- 웹사이트: [https://octxxiii.github.io/tab-timer](https://octxxiii.github.io/tab-timer-pages)
 - GitHub: [https://github.com/octxxiii/tab-timer](https://github.com/octxxiii/tab-timer)
 
 ## 감사의 말
