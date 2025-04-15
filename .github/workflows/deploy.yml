@@ -2,9 +2,9 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, gh-pages ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, gh-pages ]
 
 jobs:
   build-and-deploy:
@@ -27,20 +27,14 @@ jobs:
       - name: Build
         run: |
           echo "Current directory: $(pwd)"
-          echo "Listing website directory:"
-          ls -la website/
           echo "Creating dist directory..."
           rm -rf dist
           mkdir -p dist
-          echo "Copying files from website to dist..."
-          cp -v website/* dist/
+          echo "Copying files to dist..."
+          cp -v *.html *.js *.css dist/ || true
+          cp -v images/* dist/images/ || true
           echo "Contents of dist directory:"
           ls -la dist/
-          echo "Verifying file contents..."
-          cat dist/index.html
-          cat dist/dashboard.js
-          cat dist/styles.css
-          cat dist/privacy.html
 
       - name: Deploy to Pages repo
         uses: peaceiris/actions-gh-pages@v3
