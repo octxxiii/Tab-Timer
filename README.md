@@ -1,78 +1,63 @@
-# Tab Timer
+# Tab Timer - 웹 사이트 사용 시간 관리 확장 프로그램
 
 ![Tab Timer Logo](images/icon128.png)
 
-> "당신의 시간을 자동으로 기록하고, 더 나은 습관을 만듭니다."
+## 소개
+Tab Timer는 웹 브라우저에서 각 사이트별 사용 시간을 추적하고 관리할 수 있는 Chrome 확장 프로그램입니다. 생산성 향상과 디지털 웰빙을 위해 웹사이트 사용 시간을 모니터링하고 제한할 수 있습니다.
 
-## 프로젝트 개요
-
-Tab Timer는 사용자의 웹 사용 습관을 개선하기 위해 개발된 Chrome 확장 프로그램 기반 시간 추적 시스템입니다.
-
-### 주요 기능
-
-- 웹사이트 접속 시 자동으로 체류 시간 추적
-- 사용자가 설정한 시간 초과 시 알림
-- 일간/주간 통계 시각화 (개발 중)
-- 사용자별 목표 시간 설정 (개발 예정)
-
-### 기술 스택
-
-- **브라우저 확장**: JavaScript, Chrome API
-- **UI 구성**: HTML/CSS, Material Icons
-- **빌드 시스템**: pnpm, Vite
-- **웹 대시보드**: GitHub Pages (정적 배포), React (예정)
-- **앱**: Flutter (예정)
-- **백엔드**: Firebase or Supabase (예정)
+## 주요 기능
+- 🕒 실시간 사용 시간 추적
+- ⏰ 사이트별 시간 제한 설정
+- 🔔 시간 제한 도달 시 알림
+- 📊 일일 사용 통계 확인
+- 🌐 모든 웹사이트 지원
 
 ## 설치 방법
-
-1. Chrome 웹 스토어에서 설치 (준비 중)
-2. 또는 개발자 모드에서 로컬 설치:
-   - `chrome://extensions/` 접속
-   - 개발자 모드 활성화
-   - "압축해제된 확장 프로그램을 로드합니다" 클릭
-   - 프로젝트 폴더 선택
+1. [Chrome 웹 스토어](https://chrome.google.com/webstore)에서 "Tab Timer" 검색
+2. "Chrome에 추가" 버튼 클릭
+3. 설치 완료 후 Chrome 툴바에서 Tab Timer 아이콘 확인
 
 ## 사용 방법
+1. **시간 추적**
+   - 자동으로 모든 웹사이트의 사용 시간이 추적됩니다
+   - 팝업 창에서 실시간 사용 시간 확인 가능
 
-1. 확장 프로그램 아이콘 클릭
-2. 시간 제한 설정 (선택사항)
-3. 웹 서핑 시작 - 자동으로 시간이 추적됩니다
-4. 설정한 시간 초과 시 알림 표시
+2. **시간 제한 설정**
+   - 특정 사이트 방문 시 "Set Time Limit" 클릭
+   - 원하는 시간(분) 입력
+   - "Set" 버튼 클릭
 
-## 개발 계획
+3. **알림 설정**
+   - 시간 제한 도달 시 자동 알림
+   - 알림음 및 시각적 효과 제공
+   - "5분 더 사용" 또는 "닫기" 선택 가능
 
-### 2025 Q2 ~ Q3
-- 일간/주간 통계 차트 구현
-- 사용자별 목표 시간 설정 기능
-- 데이터 정제 및 내보내기 기능
+## 개인정보 보호
+- 모든 데이터는 사용자의 로컬 기기에만 저장됩니다
+- 외부 서버로 데이터 전송이 없습니다
+- 오프라인에서도 정상 작동합니다
 
-### 2025 Q3 ~ Q4
-- Firebase 연동
-- Flutter 기반 앱 베타 개발
-- Android 앱 출시
-
-### 2026 Q1
-- iOS 앱 개발
-- 프리미엄 기능 도입
-  - 고급 분석
-  - 집중 모드
-  - 습관 개선 AI 리포트
+## 기술 스택
+- Chrome Extension API
+- JavaScript (ES6+)
+- HTML5 & CSS3
+- Local Storage
 
 ## 기여하기
+프로젝트에 기여하고 싶으시다면:
+1. 이 저장소를 Fork 하세요
+2. 새로운 Branch를 생성하세요 (`git checkout -b feature/AmazingFeature`)
+3. 변경사항을 Commit 하세요 (`git commit -m 'Add some AmazingFeature'`)
+4. Branch에 Push 하세요 (`git push origin feature/AmazingFeature`)
+5. Pull Request를 생성하세요
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 라이센스
-
-이 프로젝트는 MIT 라이센스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
+## 라이선스
+이 프로젝트는 MIT 라이선스를 따릅니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
 
 ## 연락처
+- 이메일: [your-email@example.com](mailto:your-email@example.com)
+- 웹사이트: [https://octxxiii.github.io/tab-timer](https://octxxiii.github.io/tab-timer)
+- GitHub: [https://github.com/octxxiii/tab-timer](https://github.com/octxxiii/tab-timer)
 
-프로젝트 팀장 - [@octxxiii](https://github.com/octxxiii)
-
-프로젝트 링크: [https://github.com/octxxiii/tab-timer](https://github.com/octxxiii/tab-timer) 
+## 감사의 말
+이 프로젝트에 기여해주신 모든 분들께 감사드립니다. 

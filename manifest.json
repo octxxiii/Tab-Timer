@@ -3,7 +3,16 @@
   "name": "Tab Timer",
   "version": "1.0.0",
   "description": "Track your browser time and boost productivity. See how much time you spend on each website and improve your focus.",
-  "permissions": ["tabs", "storage", "notifications"],
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab",
+    "notifications",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
     "service_worker": "background.js"
   },
@@ -19,6 +28,9 @@
     "16": "images/icon16.png",
     "48": "images/icon48.png",
     "128": "images/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
   "author": "Your Name",
   "homepage_url": "https://octxxiii.github.io/tab-timer",
