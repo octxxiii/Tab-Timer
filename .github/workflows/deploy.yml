@@ -2,9 +2,9 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main, gh-pages ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, gh-pages ]
+    branches: [ main ]
 
 jobs:
   build-and-deploy:
@@ -30,9 +30,11 @@ jobs:
           echo "Creating dist directory..."
           rm -rf dist
           mkdir -p dist
-          echo "Copying files to dist..."
-          cp -v *.html *.js *.css dist/ || true
-          cp -v images/* dist/images/ || true
+          echo "Copying website files..."
+          cp -v website/* dist/
+          echo "Copying images..."
+          mkdir -p dist/images
+          cp -v images/* dist/images/
           echo "Contents of dist directory:"
           ls -la dist/
 
