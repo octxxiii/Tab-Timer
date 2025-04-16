@@ -1,593 +1,601 @@
 let tabTimes = {};
-let currentTab = null;
+let currentTabInfo = {
+  tabId: null,
+  domain: null,
+  startTime: null,
+  consecutiveStartTime: null // For wellness tracking
+};
 let timeLimits = {};
+let goals = {};
 let notifications = {};
 let lastNotificationTime = {};
 let updateInterval;
+let wellnessData = { consecutiveMinutes: 0 }; // Simple consecutive time tracking
+
+// Date helper
+function getYYYYMMDD(date = new Date()) {
+  return date.toISOString().split('T')[0];
+}
 
 // Initialize storage
-chrome.storage.local.get(['tabTimes', 'settings'], (result) => {
-  if (!result.tabTimes) {
-    chrome.storage.local.set({ tabTimes: {} });
+async function initializeStorage() {
+  const today = getYYYYMMDD();
+  const result = await chrome.storage.local.get(['tabTimes', 'settings', 'goals', 'dailyStats', 'siteMetadata']);
+  
+  const initialData = {};
+  if (!result.tabTimes) initialData.tabTimes = {};
+  if (!result.settings) initialData.settings = { notifications: true };
+  if (!result.goals) initialData.goals = {}; else goals = result.goals; // Load existing goals
+  if (!result.dailyStats) initialData.dailyStats = {};
+  if (!result.siteMetadata) initialData.siteMetadata = {}; // { domain: { category: '...', productive: true/false } }
+
+  // Ensure today's entry exists in dailyStats
+  if (!result.dailyStats || !result.dailyStats[today]) {
+    const stats = result.dailyStats || {};
+    stats[today] = { domains: {}, hourly: Array(24).fill(0), visits: {} }; // Add hourly array and visits
+    initialData.dailyStats = stats;
   }
-  if (!result.settings) {
-    chrome.storage.local.set({ settings: { notifications: true } });
+
+  if (Object.keys(initialData).length > 0) {
+    await chrome.storage.local.set(initialData);
+    console.log('Storage initialized:', initialData);
   }
   
   // Get current active tab on startup
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tabs[0]) {
-      currentTab = {
-        time: Date.now(),
-        domain: getRootDomain(tabs[0].url)
-      };
-      startPeriodicUpdates();
-    }
-  });
-});
+    handleTabActivation(tabs[0].id, tabs[0].url);
+  }
+}
 
-// Update current tab time
-function updateCurrentTabTime() {
-  if (!currentTab || !currentTab.domain) return;
+// Update current tab time and daily stats
+async function updateActiveTabTime() {
+  if (!currentTabInfo.tabId || !currentTabInfo.domain || !currentTabInfo.startTime) return;
 
-  const now = Date.now();
-  const timeSpent = now - currentTab.time;
-  
-  // Only update if time difference is reasonable (less than 1 hour)
-  if (timeSpent <= 0 || timeSpent >= 3600000) {
-    currentTab.time = now;
+    const now = Date.now();
+  const timeSpent = now - currentTabInfo.startTime; // Milliseconds spent since last update/activation
+  const minutesSpent = timeSpent / 60000;
+  const currentHour = new Date().getHours();
+  const today = getYYYYMMDD();
+
+  if (timeSpent <= 0 || timeSpent >= 3600000) { // Ignore unreasonable values (e.g., >1 hour jump)
+    currentTabInfo.startTime = now;
+    if (!currentTabInfo.consecutiveStartTime) currentTabInfo.consecutiveStartTime = now;
     return;
   }
 
-  console.log('Updating time for domain:', currentTab.domain, 'Time spent:', timeSpent);
-  
-  // Load current tab times
-  chrome.storage.local.get(['tabTimes'], (result) => {
-    const tabTimes = result.tabTimes || {};
-    
-    if (!tabTimes[currentTab.domain]) {
-      tabTimes[currentTab.domain] = 0;
-    }
-    
-    tabTimes[currentTab.domain] += timeSpent;
-    console.log('New total time for', currentTab.domain, ':', tabTimes[currentTab.domain]);
-    
-    // Save to storage
-    chrome.storage.local.set({ tabTimes }, () => {
-      if (chrome.runtime.lastError) {
-        console.error('Error saving tab times:', chrome.runtime.lastError);
-        return;
+  // Update total time (optional, can be derived from daily)
+  let { tabTimes = {}, dailyStats = {} } = await chrome.storage.local.get(['tabTimes', 'dailyStats']);
+  tabTimes[currentTabInfo.domain] = (tabTimes[currentTabInfo.domain] || 0) + timeSpent;
+
+  // Ensure today's stats exist
+  if (!dailyStats[today]) {
+      dailyStats[today] = { domains: {}, hourly: Array(24).fill(0), visits: {} };
+  }
+  if (!dailyStats[today].domains) dailyStats[today].domains = {};
+  if (!dailyStats[today].hourly) dailyStats[today].hourly = Array(24).fill(0);
+  if (!dailyStats[today].visits) dailyStats[today].visits = {};
+
+  // Update daily domain time
+  dailyStats[today].domains[currentTabInfo.domain] = (dailyStats[today].domains[currentTabInfo.domain] || 0) + minutesSpent;
+  // Update hourly stats
+  dailyStats[today].hourly[currentHour] = (dailyStats[today].hourly[currentHour] || 0) + minutesSpent;
+
+  // Update wellness data (consecutive time)
+  if (currentTabInfo.consecutiveStartTime) {
+    wellnessData.consecutiveMinutes = (now - currentTabInfo.consecutiveStartTime) / 60000;
+  } else {
+    wellnessData.consecutiveMinutes = 0;
+  }
+
+  // Save updated data
+  await chrome.storage.local.set({ tabTimes, dailyStats });
+
+  // Update start time for next interval
+  currentTabInfo.startTime = now;
+
+  // Check time limit using goals
+  checkTimeLimits(currentTabInfo.domain, dailyStats[today].domains[currentTabInfo.domain]);
+}
+
+// Check time limits based on goals
+function checkTimeLimits(domain, dailyTotalMinutes) {
+  if (goals[domain] && goals[domain].limit) {
+      const limitInMinutes = goals[domain].limit;
+      if (dailyTotalMinutes > limitInMinutes) {
+          createNotification(domain, dailyTotalMinutes, limitInMinutes);
       }
-      
-      console.log('Tab times saved successfully');
-      
-      // Check time limit
-      chrome.storage.local.get(['timeLimits'], (result) => {
-        const timeLimits = result.timeLimits || {};
-        if (timeLimits[currentTab.domain]) {
-          const totalTimeSpent = tabTimes[currentTab.domain];
-          const limitInMs = timeLimits[currentTab.domain] * 60000;
-          
-          if (totalTimeSpent > limitInMs) {
-            createNotification(currentTab.domain, totalTimeSpent, timeLimits[currentTab.domain]);
-          }
-        }
-      });
-    });
-  });
-  
-  // Update last active time
-  currentTab.time = now;
+  }
 }
 
-// Start periodic updates
-function startPeriodicUpdates() {
-  stopPeriodicUpdates();  // Clear any existing interval first
-  
-  updateInterval = setInterval(() => {
-    updateCurrentTabTime();
-    
-    // Notify popup to update UI
-    try {
-      chrome.runtime.sendMessage({ type: 'updateUI' }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.debug('Popup is not open:', chrome.runtime.lastError.message);
-          // This is normal when popup is closed, so we continue tracking
-        }
-      });
-    } catch (error) {
-      console.error('Error sending update message:', error);
-      // Continue tracking even if message fails
-    }
-  }, 1000);
+// Start periodic updates (renamed)
+function startTrackingUpdates() {
+  stopTrackingUpdates(); // Clear existing interval
+  if (currentTabInfo.domain) { // Only start if we have a valid domain
+     console.log('Starting tracking for:', currentTabInfo.domain);
+     if (!currentTabInfo.startTime) currentTabInfo.startTime = Date.now();
+     if (!currentTabInfo.consecutiveStartTime) currentTabInfo.consecutiveStartTime = Date.now();
+     updateInterval = setInterval(updateActiveTabTime, 5000); // Update every 5 seconds
+  } else {
+      console.log('No active domain, tracking paused.');
+      wellnessData.consecutiveMinutes = 0; // Reset consecutive time if no active domain
+  }
 }
 
-// Stop periodic updates
-function stopPeriodicUpdates() {
+// Stop periodic updates (renamed)
+function stopTrackingUpdates() {
   if (updateInterval) {
     clearInterval(updateInterval);
     updateInterval = null;
+    console.log('Tracking stopped.');
+    // Optionally update time one last time when stopping
+    // updateActiveTabTime(); 
   }
+  // Reset start times when tracking stops
+  // currentTabInfo.startTime = null;
+  // currentTabInfo.consecutiveStartTime = null; 
 }
 
 // Helper function to safely parse URLs
 function getRootDomain(url) {
   try {
-    if (!url || url === 'chrome://newtab/' || url.startsWith('chrome://')) {
-      return '';
+    if (!url || !url.startsWith('http')) { // Ignore chrome://, file:// etc.
+      return null;
     }
     const urlObj = new URL(url);
-    const domain = urlObj.hostname;
-    return domain.startsWith('www.') ? domain.substring(4) : domain;
+    let domain = urlObj.hostname;
+    // Basic cleaning (remove www.)
+    if (domain.startsWith('www.')) {
+      domain = domain.substring(4);
+    }
+    // Add more specific rules if needed (e.g., remove co.uk)
+    return domain;
   } catch (e) {
     console.error('Error parsing URL:', url, e);
-    return '';
+    return null;
   }
 }
 
-// Check if notification should be shown
+// Notification function remains largely the same, uses limit from checkTimeLimits
 function shouldShowNotification(domain) {
   const now = Date.now();
-  if (!lastNotificationTime[domain]) {
-    return true;
-  }
-  // Show notification once every 5 minutes
-  return (now - lastNotificationTime[domain]) > 5 * 60 * 1000;
+  // Limit notifications to once every 5 minutes per domain
+  return !lastNotificationTime[domain] || (now - lastNotificationTime[domain]) > 5 * 60 * 1000;
 }
 
-// Create notification
-function createNotification(domain, timeSpent, limit) {
-  if (!shouldShowNotification(domain)) {
-    return;
-  }
+function createNotification(domain, timeSpentMinutes, limitMinutes) {
+  if (!shouldShowNotification(domain)) return;
 
   const notificationId = `time-limit-${domain}-${Date.now()}`;
-  const minutesSpent = Math.floor(timeSpent / 60000);
-  const minutesLimit = limit;
+  const minutesSpent = Math.floor(timeSpentMinutes);
+  const message = `You've spent ${minutesSpent} minutes on ${domain}. Your limit is ${limitMinutes} minutes.`;
   
   chrome.notifications.create(notificationId, {
     type: 'basic',
     iconUrl: 'images/icon128.png',
     title: 'Time Limit Alert',
-    message: `You've spent ${minutesSpent} minutes on ${domain}. Your limit is ${minutesLimit} minutes.`,
+    message: message,
     buttons: [
       { title: 'Dismiss' },
-      { title: 'Add 5 Minutes' }
+      { title: 'Add 15 Minutes' } // Changed label
     ],
     requireInteraction: true,
     priority: 2
   });
 
   lastNotificationTime[domain] = Date.now();
-  notifications[notificationId] = { domain, limit };
+  notifications[notificationId] = { domain, limit: limitMinutes }; // Store limit used for notification
 }
 
-// Handle notification button clicks
-chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+// Handle notification button clicks (adjust for new goal structure)
+chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
   const notificationInfo = notifications[notificationId];
   if (!notificationInfo) return;
 
-  if (buttonIndex === 1) { // "Add 5 Minutes" clicked
-    chrome.storage.local.get(['timeLimits'], (result) => {
-      const timeLimits = result.timeLimits || {};
+  if (buttonIndex === 1) { // "Add 15 Minutes" clicked
       const domain = notificationInfo.domain;
-      timeLimits[domain] = (timeLimits[domain] || 0) + 5;
-      chrome.storage.local.set({ timeLimits });
-    });
+      if (goals[domain]) {
+          goals[domain].limit = (goals[domain].limit || 0) + 15;
+          await chrome.storage.local.set({ goals });
+          console.log(`Added 15 minutes to limit for ${domain}. New limit: ${goals[domain].limit}`);
+          // Reset last notification time to allow immediate next notification if still over limit
+          // delete lastNotificationTime[domain]; 
+      }
   }
 
   chrome.notifications.clear(notificationId);
   delete notifications[notificationId];
 });
 
-// Track tab changes
-chrome.tabs.onActivated.addListener((activeInfo) => {
-  // Update time for previous tab
-  if (currentTab) {
-    updateCurrentTabTime();
-  }
-  
-  // Get the new tab's URL
-  chrome.tabs.get(activeInfo.tabId, (tab) => {
-    if (tab && tab.url) {
-      const newDomain = getRootDomain(tab.url);
-      if (newDomain && (!currentTab || newDomain !== currentTab.domain)) {
-        currentTab = {
-          time: Date.now(),
-          domain: newDomain
-        };
-        startPeriodicUpdates();
-      }
-    }
-  });
-});
+// ---- Tab Event Handlers ----
 
-// Handle URL updates
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.url) {
-    // Update time for previous tab if it's the current tab
-    if (currentTab && tabId === tab.id) {
-      updateCurrentTabTime();
+async function handleTabActivation(tabId, url) {
+    // Update time for the previously active tab before switching
+    if (currentTabInfo.tabId && currentTabInfo.tabId !== tabId) {
+        await updateActiveTabTime();
     }
-    
-    // Update current tab if it's the active tab
-    chrome.tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
-      if (activeTabs[0] && activeTabs[0].id === tabId) {
-        const newDomain = getRootDomain(changeInfo.url);
-        if (newDomain && (!currentTab || newDomain !== currentTab.domain)) {
-          currentTab = {
-            time: Date.now(),
-            domain: newDomain
-          };
-          startPeriodicUpdates();
+
+    const newDomain = getRootDomain(url);
+    const today = getYYYYMMDD();
+
+    if (newDomain) {
+        if (newDomain !== currentTabInfo.domain) {
+            console.log(`Switching active domain to: ${newDomain}`);
+            // Different domain, reset consecutive time and start time
+            currentTabInfo.domain = newDomain;
+            currentTabInfo.tabId = tabId;
+            currentTabInfo.startTime = Date.now();
+            currentTabInfo.consecutiveStartTime = Date.now(); // Reset consecutive
+            wellnessData.consecutiveMinutes = 0;
+
+            // Increment visit count for the new domain today
+            let { dailyStats = {} } = await chrome.storage.local.get(['dailyStats']);
+            if (!dailyStats[today]) dailyStats[today] = { domains: {}, hourly: Array(24).fill(0), visits: {} };
+            if (!dailyStats[today].visits) dailyStats[today].visits = {};
+            dailyStats[today].visits[newDomain] = (dailyStats[today].visits[newDomain] || 0) + 1;
+            await chrome.storage.local.set({ dailyStats });
+
+        } else {
+            // Same domain, just update tabId and ensure start time is set
+            currentTabInfo.tabId = tabId;
+            if (!currentTabInfo.startTime) currentTabInfo.startTime = Date.now();
+            if (!currentTabInfo.consecutiveStartTime) currentTabInfo.consecutiveStartTime = Date.now(); // Ensure consecutive time starts
         }
-      }
-    });
-  }
-});
-
-// Handle window focus changes
-chrome.windows.onFocusChanged.addListener((windowId) => {
-  if (windowId === chrome.windows.WINDOW_ID_NONE) {
-    // Window lost focus, pause tracking
-    stopPeriodicUpdates();
-  } else {
-    // Window gained focus, resume tracking
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) {
-        currentTab = {
-          time: Date.now(),
-          domain: getRootDomain(tabs[0].url)
-        };
-        startPeriodicUpdates();
-      }
-    });
-  }
-});
-
-// Handle browser startup
-chrome.runtime.onStartup.addListener(() => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]) {
-      currentTab = {
-        time: Date.now(),
-        domain: getRootDomain(tabs[0].url)
-      };
-      startPeriodicUpdates();
-    }
-  });
-});
-
-// Handle browser shutdown or extension reload
-chrome.runtime.onSuspend.addListener(() => {
-  updateCurrentTabTime();
-  stopPeriodicUpdates();
-});
-
-// Reset daily stats at midnight
-function resetDailyStats() {
-  const now = new Date();
-  const midnight = new Date(now);
-  midnight.setHours(24, 0, 0, 0);
-  const timeUntilMidnight = midnight - now;
-
-  setTimeout(() => {
-    updateCurrentTabTime(); // Save final times before reset
-    tabTimes = {};
-    chrome.storage.local.set({ tabTimes });
-    resetDailyStats(); // Set up next day's reset
-  }, timeUntilMidnight);
-}
-
-// Start the daily reset cycle
-resetDailyStats();
-
-// 시간 제한 설정 저장
-let timeLimit = null;
-let timeLimitStart = null;
-
-// 메시지 리스너
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'setTimeLimit') {
-    timeLimit = request.minutes;
-    timeLimitStart = Date.now();
-    sendResponse({ success: true });
-  } else if (request.action === 'getTimeLimit') {
-    sendResponse({ minutes: timeLimit });
-  } else if (request.action === 'checkTimeLimit') {
-    if (timeLimit && timeLimitStart) {
-      const elapsedMinutes = Math.floor((Date.now() - timeLimitStart) / 60000);
-      const remainingMinutes = timeLimit - elapsedMinutes;
-      sendResponse({ remaining: remainingMinutes });
+        startTrackingUpdates(); // Start or restart tracking
     } else {
-      sendResponse({ remaining: null });
+        console.log('New tab is not trackable (e.g., chrome://), pausing tracking.');
+        // New tab is not trackable, stop tracking and reset consecutive time
+        currentTabInfo.domain = null;
+        currentTabInfo.tabId = tabId;
+        currentTabInfo.startTime = null;
+        currentTabInfo.consecutiveStartTime = null;
+        wellnessData.consecutiveMinutes = 0;
+        stopTrackingUpdates();
     }
-  } else if (request.type === 'setTimeLimit') {
-    timeLimits[request.domain] = request.minutes;
-    chrome.storage.local.set({ timeLimits });
-    sendResponse({ success: true });
-  } else if (request.type === 'getTimeLimits') {
-    sendResponse({ timeLimits });
-  } else if (request.type === 'getTabTimes') {
-    chrome.storage.local.get(['tabTimes'], (result) => {
-      sendResponse(result.tabTimes || {});
-    });
-    return true; // Required for async response
-  }
-});
-
-// Track active tab time
-let activeTabId = null;
-let startTime = Date.now();
-
-// Update time for active tab
-function updateActiveTabTime() {
-  if (!activeTabId) return;
-
-  chrome.tabs.get(activeTabId, (tab) => {
-    if (chrome.runtime.lastError) {
-      console.error(chrome.runtime.lastError);
-      return;
-    }
-
-    const domain = getRootDomain(tab.url);
-    if (!domain) return;
-
-    const elapsed = Date.now() - startTime;
-    
-    chrome.storage.local.get(['tabTimes'], (result) => {
-      const tabTimes = result.tabTimes || {};
-      tabTimes[domain] = (tabTimes[domain] || 0) + elapsed;
-      
-      chrome.storage.local.set({ tabTimes }, () => {
-        startTime = Date.now();
-      });
-    });
-  });
 }
 
-// Handle tab activation
-chrome.tabs.onActivated.addListener((activeInfo) => {
-  if (activeTabId) {
-    updateActiveTabTime();
-  }
-  activeTabId = activeInfo.tabId;
-  startTime = Date.now();
-});
-
-// Handle tab URL updates
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (tabId === activeTabId && changeInfo.url) {
-    updateActiveTabTime();
-    startTime = Date.now();
-  }
-});
-
-// Handle windows focus change
-chrome.windows.onFocusChanged.addListener((windowId) => {
-  if (windowId === chrome.windows.WINDOW_ID_NONE) {
-    if (activeTabId) {
-      updateActiveTabTime();
-    }
-    activeTabId = null;
-  } else {
-    chrome.tabs.query({ active: true, windowId }, (tabs) => {
-      if (tabs.length > 0) {
-        if (activeTabId) {
-          updateActiveTabTime();
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    try {
+        const tab = await chrome.tabs.get(activeInfo.tabId);
+        if (tab && tab.url) {
+            handleTabActivation(activeInfo.tabId, tab.url);
         }
-        activeTabId = tabs[0].id;
-        startTime = Date.now();
+    } catch (error) {
+        console.error('Error in onActivated:', error);
+    }
+});
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    // Ensure the change is relevant (URL changed) and the tab is active
+    if (changeInfo.url && tab.active) {
+        console.log(`URL changed for active tab ${tabId}: ${changeInfo.url}`);
+        // Treat URL change like a new activation
+        handleTabActivation(tabId, changeInfo.url);
+    }
+});
+
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+    if (windowId === chrome.windows.WINDOW_ID_NONE) {
+        // Lost focus - update time and stop tracking
+        console.log('Window lost focus. Pausing tracking.');
+        await updateActiveTabTime();
+        stopTrackingUpdates();
+        currentTabInfo.startTime = null; // Reset start time when focus lost
+        currentTabInfo.consecutiveStartTime = null; // Reset consecutive time
+        wellnessData.consecutiveMinutes = 0;
+    } else {
+        // Gained focus - find active tab and resume
+        console.log('Window gained focus. Resuming tracking.');
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tabs[0]) {
+            handleTabActivation(tabs[0].id, tabs[0].url);
+        }
+    }
+});
+
+// ---- Message Handling ----
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // console.log('Message received:', request); // Log all messages for debugging
+
+  if (request.action === 'setTimeLimit') {
+    // ... (existing setTimeLimit code) ...
+    const domain = getRootDomain(request.website); // Use the helper to clean the domain
+    if (domain) {
+      // Load current goals, update, then save
+      chrome.storage.local.get(['goals'], (result) => {
+          let currentGoals = result.goals || {};
+          currentGoals[domain] = {
+            // Ensure limit is a number, default to 0 if invalid
+            limit: Number.isFinite(parseInt(request.minutes)) ? parseInt(request.minutes) : 0,
+            category: request.category || 'other', // Default category
+            priority: request.priority || 'medium' // Default priority
+          };
+          goals = currentGoals; // Update in-memory goals as well
+          chrome.storage.local.set({ goals: currentGoals }).then(() => {
+            console.log('Goals updated:', currentGoals);
+    sendResponse({ success: true });
+          }).catch(err => {
+              console.error('Error saving goals:', err);
+              sendResponse({ success: false, message: err.message });
+          });
+      });
+    } else {
+        console.warn(`setTimeLimit failed for invalid website: ${request.website}`);
+        sendResponse({ success: false, message: 'Invalid website URL provided.' });
+    }
+    return true; // Indicates asynchronous response is intended
+
+  } else if (request.action === 'getDetailedStats') {
+    // ... (existing getDetailedStats code) ...
+    console.log('Received request for detailed stats.');
+    getDetailedStats().then(stats => {
+      // console.log('Sending detailed stats:', stats); // Log data being sent
+      sendResponse({ success: true, data: stats });
+    }).catch(err => {
+        console.error('Error getting detailed stats:', err);
+        sendResponse({ success: false, message: err.message });
+    });
+    return true; // Indicates asynchronous response
+
+  } else if (request.type === 'updateUI') {
+    // ... (existing updateUI code) ...
+      sendResponse({ success: true, message: 'Background received UI update request.' });
+
+  } else if (request.action === 'openPopup') {
+      console.log("Received request to open popup.");
+      // Use chrome.action API (Manifest V3) to programmatically open the popup
+      if (chrome.action && chrome.action.openPopup) {
+          chrome.action.openPopup({}, () => {
+              if (chrome.runtime.lastError) {
+                  console.error("Error opening popup:", chrome.runtime.lastError.message);
+                  sendResponse({ success: false, message: chrome.runtime.lastError.message });
+              } else {
+                  console.log("Popup opened successfully via API.");
+                  sendResponse({ success: true });
+              }
+          });
+      } else {
+          console.warn("chrome.action.openPopup API is not available.");
+          sendResponse({ success: false, message: 'API not available to open popup.' });
       }
-    });
+      return true; // Indicates asynchronous response
   }
+  // Add other message handlers if necessary
+
+  // If message is not handled, returning true might cause issues if sendResponse is never called.
+  // Consider returning false or undefined for unhandled messages.
+  // return false; 
 });
 
-// Handle time limit notifications
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'timeLimitReached') {
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icon48.png',
-      title: 'Time Limit Reached',
-      message: `You've reached your time limit for ${message.domain}`
-    });
-  }
-  return true;
-});
+// --- Statistics Calculation --- (Needs implementation)
 
-// Track active tabs and their time limits
-let activeTabs = new Map();
+async function getDetailedStats() {
+  console.log('Calculating detailed stats...');
+  const { dailyStats = {}, goals = {}, siteMetadata = {} } = await chrome.storage.local.get(['dailyStats', 'goals', 'siteMetadata']);
+  const today = getYYYYMMDD();
+  const currentMonth = today.substring(0, 7);
+  const currentYear = today.substring(0, 4);
+  const todayStats = dailyStats[today] || { domains: {}, hourly: Array(24).fill(0), visits: {} };
 
-// 탭과 알림 관리를 위한 매핑
-let tabNotifications = new Map(); // 탭 ID와 알림 ID 매핑
-let domainLimits = new Map(); // 도메인과 알림 ID 매핑
-
-// 시간 제한 체크 함수
-async function checkTimeLimits() {
-  console.log('Checking time limits...');
-
-  try {
-    const result = await chrome.storage.local.get(['timeLimits', 'tabTimes']);
-    const timeLimits = result.timeLimits || {};
-    const tabTimes = result.tabTimes || {};
-
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tabs.length) return;
-
-    const currentTab = tabs[0];
-    const domain = getRootDomain(currentTab.url);
-    
-    if (timeLimits[domain] && tabTimes[domain]) {
-      const timeSpentMinutes = Math.floor(tabTimes[domain] / 60000);
-      const limitMinutes = timeLimits[domain];
-
-      if (timeSpentMinutes >= limitMinutes) {
-        // 알림 생성
-        const notificationId = `time-limit-${domain}-${Date.now()}`;
-        await chrome.notifications.create(notificationId, {
-          type: 'basic',
-          iconUrl: 'images/icon128.png',
-          title: '시간 제한 알림',
-          message: `${domain} 사이트의 사용 시간(${limitMinutes}분)이 초과되었습니다.`,
-          requireInteraction: true,
-          priority: 2,
-          buttons: [
-            { title: '5분 더 사용' },
-            { title: '알림 닫기' }
-          ]
-        });
-
-        // 탭과 알림 ID 매핑 저장
-        tabNotifications.set(currentTab.id, notificationId);
-        domainLimits.set(domain, notificationId);
-
-        // 시간 제한 설정 제거
-        const updatedTimeLimits = { ...timeLimits };
-        delete updatedTimeLimits[domain];
-        await chrome.storage.local.set({ timeLimits: updatedTimeLimits });
-
-        // 탭 흔들기 효과
-        await shakeTab(currentTab.id);
-
-        // 알림음 재생
-        const audio = new Audio(chrome.runtime.getURL('notification.mp3'));
-        await audio.play().catch(console.error);
+  // --- Helper: Get data for a period ---
+  function getStatsForPeriod(period) { // period = 'YYYY-MM-DD', 'YYYY-MM', or 'YYYY'
+    const aggregated = { domains: {}, totalMinutes: 0, daysCount: 0 };
+    let firstDate = null;
+    for (const date in dailyStats) {
+      if (date.startsWith(period)) {
+        aggregated.daysCount++;
+        if (!firstDate || date < firstDate) firstDate = date;
+        const dayData = dailyStats[date];
+        for (const domain in dayData.domains) {
+          const minutes = dayData.domains[domain];
+          aggregated.domains[domain] = (aggregated.domains[domain] || 0) + minutes;
+          aggregated.totalMinutes += minutes;
+        }
       }
     }
-  } catch (error) {
-    console.error('Error checking time limits:', error);
+    return { ...aggregated, firstDate };
   }
+
+  // --- Calculate Daily Stats ---
+  const daily = {
+    totalTime: Object.values(todayStats.domains).reduce((sum, time) => sum + time, 0),
+    hourlyLabels: Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}`),
+    hourlyData: todayStats.hourly.map(m => Math.round(m)),
+    peakHour: findPeakHour(todayStats.hourly),
+    // Weekly comparison (last 7 days vs previous 7 days)
+    // ... (Implementation needs iteration over last 14 days of dailyStats)
+    currentWeekData: [], // Placeholder
+    previousWeekData: [], // Placeholder
+    weeklyComparisonLabels: ['월', '화', '수', '목', '금', '토', '일'] // Placeholder
+  };
+
+  // --- Calculate Monthly Stats ---
+  const monthlyAggregated = getStatsForPeriod(currentMonth);
+  const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const trendLabels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}일`);
+  const trendData = trendLabels.map(dayLabel => {
+      const dayNum = parseInt(dayLabel.replace('일', ''));
+      const dateStr = `${currentMonth}-${String(dayNum).padStart(2, '0')}`;
+      if (dailyStats[dateStr]) {
+          return Math.round(Object.values(dailyStats[dateStr].domains).reduce((s, t) => s + t, 0));
+      } return 0;
+  });
+  // Goal days calculation needs iteration and comparison with goals
+  const monthlyGoalDays = calculateGoalDays(currentMonth, dailyStats, goals);
+
+  const monthly = {
+    averageTime: monthlyAggregated.daysCount > 0 ? Math.round(monthlyAggregated.totalMinutes / monthlyAggregated.daysCount) : 0,
+    goalDays: monthlyGoalDays,
+    totalDays: daysInMonth,
+    trendLabels: trendLabels,
+    trendData: trendData,
+  };
+
+  // --- Calculate Yearly Stats ---
+  const yearlyAggregated = getStatsForPeriod(currentYear);
+  const monthLabels = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+  const monthlyTotals = monthLabels.map((_, i) => {
+      const monthStr = `${currentYear}-${String(i + 1).padStart(2, '0')}`;
+      const monthStats = getStatsForPeriod(monthStr);
+      return Math.round(monthStats.totalMinutes);
+  });
+   const monthlyAverages = monthLabels.map((_, i) => {
+      const monthStr = `${currentYear}-${String(i + 1).padStart(2, '0')}`;
+      const monthStats = getStatsForPeriod(monthStr);
+      return monthStats.daysCount > 0 ? Math.round(monthStats.totalMinutes / monthStats.daysCount) : 0;
+  });
+  const peakMonthIndex = monthlyTotals.indexOf(Math.max(...monthlyTotals));
+
+  const yearly = {
+      totalTime: Math.round(yearlyAggregated.totalMinutes),
+      peakMonth: monthLabels[peakMonthIndex],
+      dailyAverage: yearlyAggregated.daysCount > 0 ? Math.round(yearlyAggregated.totalMinutes / yearlyAggregated.daysCount) : 0,
+      monthlyLabels: monthLabels,
+      monthlyTotals: monthlyTotals,
+      monthlyAverages: monthlyAverages
+  };
+
+  // --- Calculate Site Stats ---
+  // Combine all time data (or use tabTimes for simplicity)
+  const allTimeDomainTotals = {}; 
+  Object.values(dailyStats).forEach(day => {
+      Object.entries(day.domains).forEach(([domain, time]) => {
+          allTimeDomainTotals[domain] = (allTimeDomainTotals[domain] || 0) + time;
+      });
+  });
+  const sortedDomains = Object.entries(allTimeDomainTotals).sort(([, a], [, b]) => b - a);
+  const topSites = sortedDomains.slice(0, 5);
+  const categoryUsage = calculateCategoryUsage(allTimeDomainTotals, goals, siteMetadata);
+  const siteAnalysis = calculateSiteAnalysis(todayStats.visits, allTimeDomainTotals, goals, siteMetadata);
+
+  const sites = {
+    topSitesLabels: topSites.map(([domain]) => domain),
+    topSitesData: topSites.map(([, time]) => Math.round(time)),
+    categoryLabels: Object.keys(categoryUsage),
+    categoryData: Object.values(categoryUsage).map(t => Math.round(t)),
+    analysisData: siteAnalysis
+  };
+
+  // --- Calculate Wellness Stats ---
+  // Basic calculation, needs refinement based on productive time definition
+  const totalScreenTimeToday = daily.totalTime;
+  // Productive time needs category/metadata info
+  const productiveTimeToday = calculateProductiveTime(todayStats.domains, goals, siteMetadata);
+  const consecutiveMinutes = Math.round(wellnessData.consecutiveMinutes);
+
+  const wellness = {
+      totalScreenTime: totalScreenTimeToday,
+      productiveTime: productiveTimeToday,
+      consecutiveHours: Math.floor(consecutiveMinutes / 60) // Use current session's consecutive time
+  };
+
+  return {
+    daily,
+    monthly,
+    yearly,
+    sites,
+    wellness
+  };
 }
 
-// 탭이 닫힐 때 관련 알림 제거
-chrome.tabs.onRemoved.addListener((tabId) => {
-  const notificationId = tabNotifications.get(tabId);
-  if (notificationId) {
-    chrome.notifications.clear(notificationId);
-    tabNotifications.delete(tabId);
-    
-    // 도메인 매핑에서도 제거
-    for (const [domain, nId] of domainLimits.entries()) {
-      if (nId === notificationId) {
-        domainLimits.delete(domain);
-        break;
-      }
+// --- Helper functions for stats calc ---
+function findPeakHour(hourlyData) {
+    if (!hourlyData || hourlyData.length === 0) return 'N/A';
+    const maxUsage = Math.max(...hourlyData);
+    const peakIndex = hourlyData.indexOf(maxUsage);
+    return peakIndex !== -1 ? `${String(peakIndex).padStart(2, '0')}:00` : 'N/A';
+}
+
+function calculateGoalDays(monthStr, dailyStats, goals) {
+    let count = 0;
+    for (const date in dailyStats) {
+        if (date.startsWith(monthStr)) {
+            const dayData = dailyStats[date].domains;
+            let dailyTotal = 0;
+            let goalMet = true; // Assume met until proven otherwise
+            for (const domain in dayData) {
+                dailyTotal += dayData[domain];
+                if (goals[domain] && goals[domain].limit && dayData[domain] > goals[domain].limit) {
+                    goalMet = false;
+                    // Break inner loop if one goal is missed for the day?
+                    // Depends on definition: Is it *all* goals met or *any* goal met?
+                    // Assuming *all* goals must be met for the day to count.
+                    break; 
+                }
+            }
+            // Check if *any* goal exists for the day before incrementing?
+            // Let's count if at least one goal was set for a site visited that day.
+            const hasRelevantGoal = Object.keys(dayData).some(domain => goals[domain] && goals[domain].limit);
+            if (hasRelevantGoal && goalMet) {
+                count++;
+            }
+        }
     }
-  }
-});
+    return count;
+}
 
-// 알림 버튼 클릭 처리
-chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
-  const domain = notificationId.split('-')[2]; // time-limit-domain-timestamp 형식에서 도메인 추출
-  
-  if (buttonIndex === 0) { // "5분 더 사용" 버튼
-    // 새로운 5분 제한 설정
-    const result = await chrome.storage.local.get(['timeLimits']);
-    const timeLimits = result.timeLimits || {};
-    timeLimits[domain] = 5; // 5분으로 새로 설정
-    await chrome.storage.local.set({ timeLimits });
-    
-    // 시작 시간 재설정
-    const startTime = Date.now();
-    await chrome.storage.local.set({
-      [`startTime_${domain}`]: startTime
-    });
-  }
-  
-  // 알림 제거
-  chrome.notifications.clear(notificationId);
-  
-  // 매핑에서 제거
-  for (const [tabId, nId] of tabNotifications.entries()) {
-    if (nId === notificationId) {
-      tabNotifications.delete(tabId);
-      break;
+function calculateCategoryUsage(allTimeDomainTotals, goals, siteMetadata) {
+    const usage = {};
+    for (const domain in allTimeDomainTotals) {
+        const category = (goals[domain] && goals[domain].category) || (siteMetadata[domain] && siteMetadata[domain].category) || 'other';
+        usage[category] = (usage[category] || 0) + allTimeDomainTotals[domain];
     }
-  }
-  domainLimits.delete(domain);
-});
+    return usage;
+}
 
-// 알림이 닫힐 때 처리
-chrome.notifications.onClosed.addListener((notificationId) => {
-  // 매핑에서 제거
-  for (const [tabId, nId] of tabNotifications.entries()) {
-    if (nId === notificationId) {
-      tabNotifications.delete(tabId);
-      break;
+function calculateProductiveTime(domainTimes, goals, siteMetadata) {
+    let productiveMinutes = 0;
+    const productiveCategories = ['work', 'study']; // Define productive categories
+    for (const domain in domainTimes) {
+        const category = (goals[domain] && goals[domain].category) || (siteMetadata[domain] && siteMetadata[domain].category);
+        const isProductive = (siteMetadata[domain] && siteMetadata[domain].productive) || productiveCategories.includes(category);
+        if (isProductive) {
+            productiveMinutes += domainTimes[domain];
+        }
     }
-  }
-  
-  const domain = notificationId.split('-')[2];
-  domainLimits.delete(domain);
-});
+    return Math.round(productiveMinutes);
+}
 
-// 1분마다 시간 제한 체크
-setInterval(checkTimeLimits, 60000);
-
-// 초기 설정
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.get(['timeLimits'], (result) => {
-    if (!result.timeLimits) {
-      chrome.storage.local.set({ timeLimits: {} });
+function calculateSiteAnalysis(visits = {}, allTimeDomainTotals, goals, siteMetadata) {
+    const analysis = [];
+    const domains = Object.keys(allTimeDomainTotals); // Or use domains visited today?
+    domains.sort((a, b) => allTimeDomainTotals[b] - allTimeDomainTotals[a]); // Sort by total time
+    
+    for (const domain of domains.slice(0, 20)) { // Limit analysis table size
+        const totalTime = Math.round(allTimeDomainTotals[domain] || 0);
+        const visitCount = visits[domain] || 0; // Using today's visits for simplicity
+        const productivityScore = calculateProductivityScore(domain, goals, siteMetadata); // Needs definition
+        analysis.push({
+            name: domain,
+            totalTime: totalTime,
+            visits: visitCount, 
+            // avgTime calculation needs proper visit tracking (total time / visits)
+            productivityScore: productivityScore
+        });
     }
-  });
-});
+    return analysis;
+}
 
-// Handle tab updates
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url) {
-    const domain = new URL(tab.url).hostname;
-    const startTime = Date.now();
-    
-    // 시작 시간을 storage에 저장
-    chrome.storage.local.set({
-      [`startTime_${domain}`]: startTime
-    });
-    
-    activeTabs.set(tabId, {
-      domain,
-      startTime
-    });
-  }
-});
+function calculateProductivityScore(domain, goals, siteMetadata) {
+    // Placeholder: Score based on category or explicit metadata
+    const productiveCategories = ['work', 'study'];
+    const category = (goals[domain] && goals[domain].category) || (siteMetadata[domain] && siteMetadata[domain].category);
+    if ((siteMetadata[domain] && siteMetadata[domain].productive === true) || productiveCategories.includes(category)) {
+        return 80; // Example score
+    } else if ((siteMetadata[domain] && siteMetadata[domain].productive === false) || ['entertainment', 'social'].includes(category)){
+        return 20; // Example score
+    }
+    return 50; // Neutral default
+}
 
-// Handle tab removal
-chrome.tabs.onRemoved.addListener((tabId) => {
-  activeTabs.delete(tabId);
-});
 
-// Function to shake the tab
-async function shakeTab(tabId) {
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId: tabId },
-      func: () => {
-        const originalStyle = document.body.style.cssText;
-        const shakeAnimation = `
-          @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-            20%, 40%, 60%, 80% { transform: translateX(5px); }
-          }
-        `;
-        
-        // Add animation style
-        const style = document.createElement('style');
-        style.textContent = shakeAnimation;
-        document.head.appendChild(style);
-        
-        // Apply shake animation
-        document.body.style.animation = 'shake 0.5s ease-in-out';
-        
-        // Remove animation after it completes
-        setTimeout(() => {
-          document.body.style.cssText = originalStyle;
-          style.remove();
-        }, 500);
-      }
-    });
-  } catch (error) {
-    console.error('Error shaking tab:', error);
-  }
-} 
+// Initialize on install/update/startup
+chrome.runtime.onInstalled.addListener(initializeStorage);
+chrome.runtime.onStartup.addListener(initializeStorage);
+
+// Initial call in case startup event doesn't fire reliably
+initializeStorage();
+
+// Add cleanup logic for old dailyStats data (optional)
+// function cleanupOldData() { ... } 

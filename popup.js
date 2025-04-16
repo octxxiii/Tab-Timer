@@ -10,11 +10,12 @@ document.addEventListener('DOMContentLoaded', () => {
     timeLimitMinutes: document.getElementById('timeLimitMinutes'),
     setTimeLimit: document.getElementById('setTimeLimit'),
     limitsList: document.getElementById('limitsList'),
-    currentLimit: document.getElementById('currentLimit')
+    currentLimit: document.getElementById('currentLimit'),
+    openDashboardButton: document.getElementById('openDashboardButton')
   };
 
   // Check for required elements and handle missing ones gracefully
-  const requiredElements = ['tabList', 'totalTime', 'mostUsed', 'showMore', 'limitsList'];
+  const requiredElements = ['tabList', 'totalTime', 'mostUsed', 'showMore', 'limitsList', 'openDashboardButton'];
   let missingElements = false;
   
   requiredElements.forEach(elementId => {
@@ -339,7 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Received message:', message);
     if (message.type === 'updateUI') {
-      updateUI();
+  updateUI();
       sendResponse({ success: true });
     }
     return true; // Keep the message channel open for async response
@@ -365,16 +366,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!site) {
         alert('Please enter a valid site URL');
-        return;
+          return;
       }
 
       const timeLimit = minutes * 60 * 1000; // Convert to milliseconds
 
-      chrome.storage.local.get(['timeLimits'], (result) => {
-        const timeLimits = result.timeLimits || {};
+        chrome.storage.local.get(['timeLimits'], (result) => {
+          const timeLimits = result.timeLimits || {};
         timeLimits[site] = timeLimit;
-        
-        chrome.storage.local.set({ timeLimits }, () => {
+          
+          chrome.storage.local.set({ timeLimits }, () => {
           console.log('Time limit saved:', { site, timeLimit });
           updateCurrentLimit();
           elements.timeLimitMinutes.value = '';
@@ -510,6 +511,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initial UI update and start real-time updates
   updateUI().then(() => {
     startRealtimeUpdates();
-    updateCurrentLimit();
+  updateCurrentLimit();
   });
+
+  // 대시보드 열기 버튼 이벤트 리스너 추가
+  if (elements.openDashboardButton) {
+    elements.openDashboardButton.addEventListener('click', () => {
+      try {
+        // 확장 프로그램 내부의 대시보드 페이지 URL 가져오기
+        const dashboardUrl = chrome.runtime.getURL('dashboard/index.html');
+        // 새 탭에서 대시보드 열기
+        chrome.tabs.create({ url: dashboardUrl });
+        // Optionally close the popup after opening the dashboard
+        // window.close(); 
+      } catch (error) {
+          console.error("Error opening dashboard:", error);
+          // Provide feedback to the user if needed
+      }
+    });
+  } 
+  // 이벤트 리스너 추가 끝
 }); 
