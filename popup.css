@@ -1,13 +1,20 @@
 body {
   width: 300px;
   padding: 10px;
-  font-family: 'Noto Sans KR', Arial, sans-serif;
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .container {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+h2, h3 {
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 500;
 }
 
 .tab-item {
@@ -54,10 +61,31 @@ button {
   padding: 5px 10px;
   border-radius: 4px;
   cursor: pointer;
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 button:hover {
   background: #1976d2;
+}
+
+.dashboard-button {
+  width: 100%;
+  padding: 8px;
+  font-size: 14px;
+  background: #4285f4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.dashboard-button:hover {
+  background: #3367d6;
+}
+
+.dashboard-button i {
+  font-size: 16px;
 }
 
 .show-more {
@@ -80,6 +108,7 @@ select {
   padding: 5px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .limits-list {

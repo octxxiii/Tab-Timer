@@ -1,8 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Tab Timer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
   <div class="container">
@@ -15,8 +20,9 @@
       <p>Most Used: <span id="mostUsed">-</span></p>
     </div>
     
-    <!-- Add Dashboard Button Here -->
-    <button id="openDashboardButton" class="dashboard-button">📊 View Full Dashboard</button>
+    <button id="openDashboardButton" class="dashboard-button">
+      <i class="fas fa-chart-bar"></i> View Full Dashboard
+    </button>
 
     <div class="time-limit">
       <h3>Time Limit Settings</h3>

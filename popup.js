@@ -514,21 +514,237 @@ document.addEventListener('DOMContentLoaded', () => {
   updateCurrentLimit();
   });
 
-  // 대시보드 열기 버튼 이벤트 리스너 추가
-  if (elements.openDashboardButton) {
-    elements.openDashboardButton.addEventListener('click', () => {
-      try {
-        // 확장 프로그램 내부의 대시보드 페이지 URL 가져오기
-        const dashboardUrl = chrome.runtime.getURL('dashboard/index.html');
-        // 새 탭에서 대시보드 열기
-        chrome.tabs.create({ url: dashboardUrl });
-        // Optionally close the popup after opening the dashboard
-        // window.close(); 
-      } catch (error) {
-          console.error("Error opening dashboard:", error);
-          // Provide feedback to the user if needed
+  // 대시보드로 데이터 전송하는 함수
+  async function sendDataToDashboard() {
+    try {
+      const data = await new Promise((resolve) => {
+        chrome.storage.local.get(['tabTimes', 'dailyStats', 'weeklyStats', 'timeLimits'], resolve);
+      });
+
+      // 디지털 웰빙 점수 계산
+      const totalUsageTime = Object.values(data.tabTimes || {}).reduce((sum, time) => sum + time, 0);
+      const productivityScore = calculateProductivityScore(data.tabTimes || {});
+      const stressLevel = calculateStressLevel(totalUsageTime);
+      const detoxScore = calculateDetoxScore(totalUsageTime);
+
+      const dashboardData = {
+        type: 'TAB_TIMER_DATA',
+        data: {
+          dailyStats: data.dailyStats || {},
+          weeklyStats: data.weeklyStats || {},
+          timeLimits: data.timeLimits || {},
+          wellbeingMetrics: {
+            detoxScore,
+            productivityScore,
+            stressLevel
+          }
+        }
+      };
+
+      // postMessage를 통해 대시보드로 데이터 전송
+      window.localStorage.setItem('tabTimerData', JSON.stringify(dashboardData));
+    } catch (error) {
+      console.error('Error sending data to dashboard:', error);
+    }
+  }
+
+  // 생산성 점수 계산 (0-100)
+  function calculateProductivityScore(tabTimes) {
+    const productiveDomainsRegex = /^(github\.com|docs\.google\.com|notion\.so|stackoverflow\.com)$/i;
+    const distractingDomainsRegex = /^(youtube\.com|facebook\.com|twitter\.com|instagram\.com)$/i;
+    
+    let productiveTime = 0;
+    let distractingTime = 0;
+    
+    Object.entries(tabTimes).forEach(([domain, time]) => {
+      if (productiveDomainsRegex.test(domain)) {
+        productiveTime += time;
+      } else if (distractingDomainsRegex.test(domain)) {
+        distractingTime += time;
       }
     });
-  } 
-  // 이벤트 리스너 추가 끝
+
+    const totalTime = productiveTime + distractingTime;
+    if (totalTime === 0) return 0;
+    
+    return Math.round((productiveTime / totalTime) * 100);
+  }
+
+  // 스트레스 레벨 계산 (0-100)
+  function calculateStressLevel(totalUsageTime) {
+    const HOUR = 3600000; // 1시간 (밀리초)
+    const maxHealthyUsage = 8 * HOUR; // 8시간을 최대 건강한 사용 시간으로 설정
+    
+    return Math.min(100, Math.round((totalUsageTime / maxHealthyUsage) * 100));
+  }
+
+  // 디지털 디톡스 점수 계산 (0-100)
+  function calculateDetoxScore(totalUsageTime) {
+    const HOUR = 3600000;
+    const targetUsage = 6 * HOUR; // 목표 사용 시간 6시간
+    
+    if (totalUsageTime <= targetUsage) {
+      return 100 - Math.round((totalUsageTime / targetUsage) * 50); // 최대 100점
+    } else {
+      return Math.max(0, 50 - Math.round(((totalUsageTime - targetUsage) / targetUsage) * 50)); // 최소 0점
+    }
+  }
+
+  // 대시보드 열기 버튼 이벤트 리스너 추가
+  if (elements.openDashboardButton) {
+    elements.openDashboardButton.addEventListener('click', async () => {
+      try {
+        // 현재 저장된 데이터 가져오기
+        const data = await chrome.storage.local.get(['tabTimes', 'timeLimits']);
+        
+        // 데이터 가공
+        const processedData = {
+          totalTime: Object.values(data.tabTimes || {}).reduce((sum, time) => sum + time, 0),
+          topSites: Object.entries(data.tabTimes || {})
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5),
+          timeLimits: data.timeLimits || {}
+        };
+
+        // URL 파라미터로 데이터 전달
+        const encodedData = encodeURIComponent(JSON.stringify(processedData));
+        const dashboardUrl = `https://octxxiii.github.io/tab-timer-pages/#daily?data=${encodedData}`;
+        
+        // 새 탭에서 대시보드 열기
+        chrome.tabs.create({ url: dashboardUrl });
+      } catch (error) {
+        console.error('Error opening dashboard:', error);
+      }
+    });
+  }
+
+  async function openDashboard() {
+    const data = await chrome.storage.local.get(['dailyStats', 'weeklyStats']);
+    // localStorage를 통해 데이터 전달
+    localStorage.setItem('tabTimerData', JSON.stringify(data));
+    window.open('https://octxxiii.github.io/tab-timer-pages/#daily');
+  }
+
+  function updateDailyStats(dailyStats) {
+    const today = new Date().toISOString().split('T')[0];
+    const todayData = dailyStats[today] || {};
+    
+    // 총 사용 시간
+    const totalTime = Object.values(todayData).reduce((sum, time) => sum + time, 0);
+    
+    // 가장 많이 사용한 상위 5개 사이트
+    const topSites = Object.entries(todayData)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([domain, time]) => ({
+        domain,
+        hours: Math.floor(time / 3600000),
+        minutes: Math.floor((time % 3600000) / 60000)
+      }));
+
+    // HTML 업데이트
+    const dailySection = document.querySelector('#daily');
+    dailySection.innerHTML = `
+      <h2>오늘의 브라우징</h2>
+      <div class="total-time">
+        <h3>총 사용 시간</h3>
+        <p>${Math.floor(totalTime / 3600000)}시간 ${Math.floor((totalTime % 3600000) / 60000)}분</p>
+      </div>
+      <div class="top-sites">
+        <h3>자주 방문한 사이트</h3>
+        <ul>
+          ${topSites.map(site => `
+            <li>
+              <span class="domain">${site.domain}</span>
+              <span class="time">${site.hours}시간 ${site.minutes}분</span>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  function updateWeeklyAnalysis(weeklyStats) {
+    const currentWeek = getCurrentWeek();
+    const weekData = weeklyStats[currentWeek] || {};
+    
+    // 생산적인 사이트와 비생산적인 사이트 분류
+    const productiveSites = ['github.com', 'docs.google.com', 'notion.so'];
+    const distractingSites = ['youtube.com', 'facebook.com', 'twitter.com'];
+    
+    let productiveTime = 0;
+    let distractingTime = 0;
+    
+    Object.entries(weekData).forEach(([domain, time]) => {
+      if (productiveSites.includes(domain)) productiveTime += time;
+      if (distractingSites.includes(domain)) distractingTime += time;
+    });
+
+    const weeklySection = document.querySelector('#weekly');
+    weeklySection.innerHTML = `
+      <h2>주간 사용 패턴</h2>
+      <div class="productivity-ratio">
+        <h3>생산성 비율</h3>
+        <div class="progress-bar">
+          <div class="progress" style="width: ${(productiveTime / (productiveTime + distractingTime)) * 100}%"></div>
+        </div>
+        <p>생산적 활동: ${Math.floor(productiveTime / 3600000)}시간</p>
+        <p>비생산적 활동: ${Math.floor(distractingTime / 3600000)}시간</p>
+      </div>
+    `;
+  }
+
+  function updateGoals(timeLimits) {
+    const goalsSection = document.querySelector('#goals');
+    goalsSection.innerHTML = `
+      <h2>사용 시간 목표</h2>
+      <div class="current-limits">
+        <h3>설정된 제한</h3>
+        <ul>
+          ${Object.entries(timeLimits).map(([domain, limit]) => `
+            <li>
+              <span class="domain">${domain}</span>
+              <span class="limit">${Math.floor(limit / 60000)}분</span>
+              <div class="progress-bar">
+                <div class="progress" style="width: ${(getDailyUsage(domain) / limit) * 100}%"></div>
+              </div>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `;
+  }
+
+  function updateWellbeingInsights(dailyStats, weeklyStats) {
+    const insights = [];
+    
+    // 과다 사용 감지
+    const todayTotal = getTodayTotalTime(dailyStats);
+    if (todayTotal > 8 * 3600000) { // 8시간 초과
+      insights.push('오늘 화면 시간이 8시간을 초과했습니다. 잠시 휴식을 취하는 것은 어떨까요?');
+    }
+    
+    // 생산성 패턴 분석
+    const productiveRatio = getProductiveTimeRatio(weeklyStats);
+    if (productiveRatio < 0.4) { // 40% 미만
+      insights.push('이번 주는 생산적인 활동 비율이 낮습니다. 집중 시간을 늘려보세요.');
+    }
+
+    const insightsSection = document.querySelector('#insights');
+    insightsSection.innerHTML = `
+      <h2>맞춤 인사이트</h2>
+      <ul class="insights-list">
+        ${insights.map(insight => `<li>${insight}</li>`).join('')}
+      </ul>
+    `;
+  }
+
+  // URL에서 데이터 파라미터 읽기
+  const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
+  const data = JSON.parse(decodeURIComponent(urlParams.get('data') || '{}'));
+  
+  // 데이터 표시 함수 호출
+  updateDailyStats(data.dailyStats);
+  updateWeeklyAnalysis(data.weeklyStats);
+  updateWellbeingInsights(data.dailyStats, data.weeklyStats);
 }); 

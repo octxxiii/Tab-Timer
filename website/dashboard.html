@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tab Timer 대시보드</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Tab Timer 대시보드</h1>
+            <p>웹 사용 시간을 효율적으로 관리하세요</p>
+        </header>
+
+        <div class="dashboard-grid">
+            <div class="card" id="daily-stats">
+                <h2>오늘의 통계</h2>
+                <div class="metric">
+                    <div class="metric-value" id="total-time">0:00</div>
+                    <div class="metric-label">총 사용 시간</div>
+                </div>
+                <div class="top-sites">
+                    <h3>자주 방문한 사이트</h3>
+                    <ul id="top-sites-list">
+                        <!-- JavaScript로 동적 업데이트 -->
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card" id="weekly-stats">
+                <h2>주간 통계</h2>
+                <div class="metric">
+                    <div class="metric-value" id="productivity-score">0%</div>
+                    <div class="metric-label">생산성 점수</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="goal-achievement">0%</div>
+                    <div class="metric-label">목표 달성률</div>
+                </div>
+                <div class="chart-container" id="weekly-chart">
+                    <!-- 차트가 여기에 렌더링됩니다 -->
+                </div>
+            </div>
+
+            <div class="card" id="wellbeing-tips">
+                <h2>웰빙 팁</h2>
+                <ul id="tips-list">
+                    <!-- JavaScript로 동적 업데이트 -->
+                </ul>
+            </div>
+
+            <div class="card" id="site-limits">
+                <h2>사이트 제한 설정</h2>
+                <div class="current-limits">
+                    <ul id="limits-list">
+                        <!-- JavaScript로 동적 업데이트 -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Tab Timer &copy; 2024 | <a href="#">설정</a> | <a href="#">도움말</a></p>
+        </footer>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html> 

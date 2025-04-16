@@ -589,7 +589,6 @@ function calculateProductivityScore(domain, goals, siteMetadata) {
     return 50; // Neutral default
 }
 
-
 // Initialize on install/update/startup
 chrome.runtime.onInstalled.addListener(initializeStorage);
 chrome.runtime.onStartup.addListener(initializeStorage);
@@ -599,3 +598,106 @@ initializeStorage();
 
 // Add cleanup logic for old dailyStats data (optional)
 // function cleanupOldData() { ... } 
+
+// 일간/주간 통계 데이터 업데이트
+async function updateStatistics(domain, time) {
+  try {
+    const stats = await new Promise((resolve) => {
+      chrome.storage.local.get(['dailyStats', 'weeklyStats', 'lastUpdate'], resolve);
+    });
+
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentWeek = getWeekNumber(now);
+    
+    // 일간 통계 업데이트
+    const dailyStats = stats.dailyStats || {};
+    if (!dailyStats[today]) {
+      dailyStats[today] = {};
+    }
+    dailyStats[today][domain] = (dailyStats[today][domain] || 0) + time;
+
+    // 주간 통계 업데이트
+    const weeklyStats = stats.weeklyStats || {};
+    if (!weeklyStats[currentWeek]) {
+      weeklyStats[currentWeek] = {};
+    }
+    weeklyStats[currentWeek][domain] = (weeklyStats[currentWeek][domain] || 0) + time;
+
+    // 오래된 데이터 정리
+    cleanupOldData(dailyStats, weeklyStats);
+
+    // 저장
+    await chrome.storage.local.set({
+      dailyStats,
+      weeklyStats,
+      lastUpdate: now.getTime()
+    });
+  } catch (error) {
+    console.error('Error updating statistics:', error);
+  }
+}
+
+// 주차 계산 함수
+function getWeekNumber(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return `${d.getFullYear()}-W${weekNo}`;
+}
+
+// 오래된 데이터 정리
+function cleanupOldData(dailyStats, weeklyStats) {
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+  const twelveWeeksAgo = new Date(now.getTime() - (12 * 7 * 24 * 60 * 60 * 1000));
+
+  // 30일 이상 된 일간 데이터 삭제
+  Object.keys(dailyStats).forEach(date => {
+    if (new Date(date) < thirtyDaysAgo) {
+      delete dailyStats[date];
+    }
+  });
+
+  // 12주 이상 된 주간 데이터 삭제
+  Object.keys(weeklyStats).forEach(week => {
+    const [year, weekNum] = week.split('-W');
+    const weekDate = getDateOfWeek(parseInt(weekNum), parseInt(year));
+    if (weekDate < twelveWeeksAgo) {
+      delete weeklyStats[week];
+    }
+  });
+}
+
+// 주차의 시작 날짜 계산
+function getDateOfWeek(week, year) {
+  const date = new Date(year, 0, 1 + (week - 1) * 7);
+  date.setDate(date.getDate() - date.getDay() + 1);
+  return date;
+}
+
+// 탭 시간 업데이트 시 통계도 함께 업데이트
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    const domain = getRootDomain(tab.url);
+    
+    if (domain && isTrackableDomain(domain)) {
+      const data = await new Promise((resolve) => {
+        chrome.storage.local.get(['tabTimes'], resolve);
+      });
+      
+      const tabTimes = data.tabTimes || {};
+      const previousTime = tabTimes[domain] || 0;
+      const timeSpent = Date.now() - (lastActiveTime || Date.now());
+      
+      if (timeSpent > 0 && timeSpent < 24 * 60 * 60 * 1000) { // 하루 이내의 시간만 기록
+        await updateStatistics(domain, timeSpent);
+      }
+    }
+  } catch (error) {
+    console.error('Error in tab activation handler:', error);
+  }
+}); 
