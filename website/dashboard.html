@@ -3,68 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tab Timer 대시보드</title>
-    <link rel="stylesheet" href="dashboard.css">
+    <title>Tab Timer - 디지털 웰빙 대시보드</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Tab Timer 대시보드</h1>
-            <p>웹 사용 시간을 효율적으로 관리하세요</p>
-        </header>
+    <header>
+        <div class="container">
+            <img src="images/icon128.png" alt="Tab Timer Logo" class="logo">
+            <h1>Tab Timer 디지털 웰빙 대시보드</h1>
+            <nav>
+                <a href="index.html" class="button">홈으로</a>
+            </nav>
+        </div>
+    </header>
 
-        <div class="dashboard-grid">
-            <div class="card" id="daily-stats">
-                <h2>오늘의 통계</h2>
-                <div class="metric">
-                    <div class="metric-value" id="total-time">0:00</div>
-                    <div class="metric-label">총 사용 시간</div>
-                </div>
-                <div class="top-sites">
-                    <h3>자주 방문한 사이트</h3>
-                    <ul id="top-sites-list">
-                        <!-- JavaScript로 동적 업데이트 -->
-                    </ul>
-                </div>
+    <main class="container">
+        <section id="daily">
+            <h2>일간 통계</h2>
+            <div class="total-time">
+                <h3>총 사용 시간</h3>
+                <p>로딩 중...</p>
             </div>
-
-            <div class="card" id="weekly-stats">
-                <h2>주간 통계</h2>
-                <div class="metric">
-                    <div class="metric-value" id="productivity-score">0%</div>
-                    <div class="metric-label">생산성 점수</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-value" id="goal-achievement">0%</div>
-                    <div class="metric-label">목표 달성률</div>
-                </div>
-                <div class="chart-container" id="weekly-chart">
-                    <!-- 차트가 여기에 렌더링됩니다 -->
-                </div>
-            </div>
-
-            <div class="card" id="wellbeing-tips">
-                <h2>웰빙 팁</h2>
-                <ul id="tips-list">
-                    <!-- JavaScript로 동적 업데이트 -->
+            <div class="top-sites">
+                <h3>자주 방문한 사이트</h3>
+                <ul>
+                    <li>데이터를 불러오는 중입니다...</li>
                 </ul>
             </div>
+        </section>
 
-            <div class="card" id="site-limits">
-                <h2>사이트 제한 설정</h2>
-                <div class="current-limits">
-                    <ul id="limits-list">
-                        <!-- JavaScript로 동적 업데이트 -->
-                    </ul>
+        <section id="weekly">
+            <h2>주간 통계</h2>
+            <div class="weekly-summary">
+                <h3>이번 주 요약</h3>
+                <div id="weekly-stats">로딩 중...</div>
+            </div>
+        </section>
+
+        <section id="insights">
+            <h2>웰빙 인사이트</h2>
+            <div id="wellbeing-metrics">
+                <div class="metric">
+                    <h3>생산성 지수</h3>
+                    <div id="productivity-score">-</div>
+                    <p>집중 시간과 산만 시간의 비율</p>
+                </div>
+                <div class="metric">
+                    <h3>스트레스 레벨</h3>
+                    <div id="stress-level">-</div>
+                    <p>연속 사용 시간 기반 측정</p>
                 </div>
             </div>
-        </div>
+            <div id="wellbeing-tips">
+                <h3>웰빙 팁</h3>
+                <ul>
+                    <li>데이터를 분석하는 중입니다...</li>
+                </ul>
+            </div>
+        </section>
 
-        <footer>
-            <p>Tab Timer &copy; 2024 | <a href="#">설정</a> | <a href="#">도움말</a></p>
-        </footer>
-    </div>
+        <section id="goals">
+            <h2>목표 설정</h2>
+            <div class="current-limits">
+                <h3>설정된 제한</h3>
+                <ul>
+                    <li>데이터를 불러오는 중입니다...</li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <footer class="container">
+        <p>이 프로젝트는 MIT 라이선스를 따릅니다.</p>
+        <div class="links">
+            <a href="https://github.com/octxxiii/tab-timer">GitHub</a>
+            <a href="privacy.html">개인정보 처리방침</a>
+        </div>
+    </footer>
 
     <script src="dashboard.js"></script>
 </body>
