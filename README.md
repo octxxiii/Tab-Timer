@@ -60,4 +60,7 @@ Tab Timer는 웹 브라우저에서 각 사이트별 사용 시간을 추적하�
 - GitHub: [https://github.com/octxxiii/tab-timer](https://github.com/octxxiii/tab-timer)
 
 ## 감사의 말
-이 프로젝트에 기여해주신 모든 분들께 감사드립니다. 
+이 프로젝트에 기여해주신 모든 분들께 감사드립니다.
+
+## 테스트 배포
+- GitHub Actions 배포 테스트를 위한 메시지입니다.
