@@ -54,14 +54,93 @@ function initializeCharts() {
 // 대시보드 데이터 로드
 async function loadDashboardData() {
     try {
-        // Chrome 확장 프로그램과 통신
-        const response = await chrome.runtime.sendMessage({ action: 'getDashboardData' });
+        // Chrome Storage에서 데이터 가져오기
+        const result = await chrome.storage.local.get(['tabTimes', 'dailyStats', 'timeLimits', 'limitStartTimes']);
         
-        if (response) {
-            updateDashboard(response);
+        // 오늘 날짜의 데이터 준비
+        const today = new Date().toISOString().split('T')[0];
+        const dailyStats = result.dailyStats || {};
+        const todayData = dailyStats[today] || { domains: {}, hourly: Array(24).fill(0), visits: {} };
+        
+        // 총 사용 시간 계산
+        const totalTime = Object.values(result.tabTimes || {}).reduce((sum, time) => sum + time, 0);
+        
+        // 상위 5개 사이트 계산
+        const topSites = Object.entries(todayData.domains)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 5)
+          .map(([domain, time]) => ({ domain, time }));
+        
+        // 이번 주 데이터 계산
+        const weekStart = new Date(today);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        
+        const weeklyData = {
+          totalTime: 0,
+          dailyTotals: Array(7).fill(0),
+          topSites: {}
+        };
+        
+        // 최근 7일간의 데이터 집계
+        for (let i = 0; i < 7; i++) {
+          const date = new Date(weekStart);
+          date.setDate(date.getDate() + i);
+          const dateStr = date.toISOString().split('T')[0];
+          
+          if (dailyStats[dateStr] && dailyStats[dateStr].domains) {
+            const dailyTotal = Object.values(dailyStats[dateStr].domains).reduce((sum, time) => sum + time, 0);
+            weeklyData.dailyTotals[i] = dailyTotal;
+            weeklyData.totalTime += dailyTotal;
+            
+            Object.entries(dailyStats[dateStr].domains).forEach(([domain, time]) => {
+              weeklyData.topSites[domain] = (weeklyData.topSites[domain] || 0) + time;
+            });
+          }
         }
+        
+        // 시간 제한 데이터 준비
+        const limits = Object.entries(result.timeLimits || {}).map(([domain, limit]) => {
+          const startTime = result.limitStartTimes?.[domain];
+          const remaining = startTime ? Math.max(0, limit - (Date.now() - startTime)) : limit;
+          return { domain, limit, remaining };
+        });
+        
+        const data = {
+          dailyStats: {
+            totalTime,
+            topSites,
+            hourlyUsage: todayData.hourly
+          },
+          weeklyStats: {
+            totalTime: weeklyData.totalTime,
+            avgDailyTime: weeklyData.totalTime / 7,
+            dailyTotals: weeklyData.dailyTotals,
+            topSites: Object.entries(weeklyData.topSites)
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 5)
+              .map(([domain, time]) => ({ domain, time }))
+          },
+          limits
+        };
+
+        updateDashboard(data);
+
+        // 1초마다 데이터 업데이트
+        setInterval(async () => {
+          const newResult = await chrome.storage.local.get(['tabTimes', 'dailyStats', 'timeLimits', 'limitStartTimes']);
+          const newData = {
+            ...data,
+            limits: Object.entries(newResult.timeLimits || {}).map(([domain, limit]) => {
+              const startTime = newResult.limitStartTimes?.[domain];
+              const remaining = startTime ? Math.max(0, limit - (Date.now() - startTime)) : limit;
+              return { domain, limit, remaining };
+            })
+          };
+          updateDashboard(newData);
+        }, 1000);
+
     } catch (error) {
-        console.error('데이터 로드 중 오류 발생:', error);
+        console.error('데이터 로드 오류:', error);
         showError('데이터를 불러오는 중 오류가 발생했습니다.');
     }
 }
@@ -79,6 +158,12 @@ function updateDashboard(data) {
     
     // 사이트 제한 업데이트
     updateSiteLimits(data.siteLimits);
+
+    // 웰빙 섹션 숨기기
+    const insightsSection = document.getElementById('insights');
+    if (insightsSection) {
+        insightsSection.style.display = 'none';
+    }
 }
 
 // 일일 통계 업데이트
@@ -160,4 +245,219 @@ function showError(message) {
 }
 
 // 초기화
-document.addEventListener('DOMContentLoaded', initializeDashboard); 
+document.addEventListener('DOMContentLoaded', initializeDashboard);
+
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // Chrome Storage에서 데이터 가져오기
+    const result = await chrome.storage.local.get(['tabTimes', 'dailyStats', 'timeLimits', 'limitStartTimes']);
+    
+    // 오늘 날짜의 데이터 준비
+    const today = new Date().toISOString().split('T')[0];
+    const dailyStats = result.dailyStats || {};
+    const todayData = dailyStats[today] || { domains: {}, hourly: Array(24).fill(0), visits: {} };
+    
+    // 총 사용 시간 계산
+    const totalTime = Object.values(result.tabTimes || {}).reduce((sum, time) => sum + time, 0);
+    
+    // 상위 5개 사이트 계산
+    const topSites = Object.entries(todayData.domains)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([domain, time]) => ({ domain, time }));
+    
+    // 이번 주 데이터 계산
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    
+    const weeklyData = {
+      totalTime: 0,
+      dailyTotals: Array(7).fill(0),
+      topSites: {}
+    };
+    
+    // 최근 7일간의 데이터 집계
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStart);
+      date.setDate(date.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      if (dailyStats[dateStr] && dailyStats[dateStr].domains) {
+        const dailyTotal = Object.values(dailyStats[dateStr].domains).reduce((sum, time) => sum + time, 0);
+        weeklyData.dailyTotals[i] = dailyTotal;
+        weeklyData.totalTime += dailyTotal;
+        
+        Object.entries(dailyStats[dateStr].domains).forEach(([domain, time]) => {
+          weeklyData.topSites[domain] = (weeklyData.topSites[domain] || 0) + time;
+        });
+      }
+    }
+    
+    // 시간 제한 데이터 준비
+    const limits = Object.entries(result.timeLimits || {}).map(([domain, limit]) => {
+      const startTime = result.limitStartTimes?.[domain];
+      const remaining = startTime ? Math.max(0, limit - (Date.now() - startTime)) : limit;
+      return { domain, limit, remaining };
+    });
+    
+    const data = {
+      dailyStats: {
+        totalTime,
+        topSites,
+        hourlyUsage: todayData.hourly
+      },
+      weeklyStats: {
+        totalTime: weeklyData.totalTime,
+        avgDailyTime: weeklyData.totalTime / 7,
+        dailyTotals: weeklyData.dailyTotals,
+        topSites: Object.entries(weeklyData.topSites)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 5)
+          .map(([domain, time]) => ({ domain, time }))
+      },
+      limits
+    };
+
+    updateDashboard(data);
+
+    // 1초마다 데이터 업데이트
+    setInterval(async () => {
+      const newResult = await chrome.storage.local.get(['tabTimes', 'dailyStats', 'timeLimits', 'limitStartTimes']);
+      const newData = {
+        ...data,
+        limits: Object.entries(newResult.timeLimits || {}).map(([domain, limit]) => {
+          const startTime = newResult.limitStartTimes?.[domain];
+          const remaining = startTime ? Math.max(0, limit - (Date.now() - startTime)) : limit;
+          return { domain, limit, remaining };
+        })
+      };
+      updateDashboard(newData);
+    }, 1000);
+
+  } catch (error) {
+    console.error('데이터 로드 오류:', error);
+    showError('데이터를 불러오는 중 오류가 발생했습니다.');
+  }
+});
+
+function formatTime(ms) {
+  if (typeof ms !== 'number' || isNaN(ms)) return '0시간 0분';
+  const hours = Math.floor(ms / 3600000);
+  const minutes = Math.floor((ms % 3600000) / 60000);
+  return `${hours}시간 ${minutes}분`;
+}
+
+function updateDashboard(data) {
+  // 일간 통계 업데이트
+  updateDailyStats(data.dailyStats);
+  
+  // 주간 통계 업데이트
+  updateWeeklyStats(data.weeklyStats);
+  
+  // 시간 제한 업데이트
+  updateLimits(data.limits);
+
+  // 웰빙 섹션 숨기기
+  const insightsSection = document.getElementById('insights');
+  if (insightsSection) {
+    insightsSection.style.display = 'none';
+  }
+}
+
+function updateDailyStats(dailyStats) {
+  if (!dailyStats) {
+    showError('일간 통계 데이터가 없습니다.');
+    return;
+  }
+
+  // 총 사용 시간 업데이트
+  const totalTimeElement = document.querySelector('.total-time p');
+  if (totalTimeElement) {
+    totalTimeElement.textContent = formatTime(dailyStats.totalTime);
+  }
+
+  // 자주 방문한 사이트 업데이트
+  const topSitesList = document.querySelector('.top-sites ul');
+  if (!topSitesList) return;
+
+  if (dailyStats.topSites && dailyStats.topSites.length > 0) {
+    topSitesList.innerHTML = dailyStats.topSites
+      .map(site => `<li class="site-item">
+        <span class="site-name">${site.domain}</span>
+        <span class="site-time">${formatTime(site.time)}</span>
+      </li>`)
+      .join('');
+  } else {
+    topSitesList.innerHTML = '<li>방문 기록이 없습니다.</li>';
+  }
+}
+
+function updateWeeklyStats(weeklyStats) {
+  const weeklyStatsElement = document.getElementById('weekly-stats');
+  if (!weeklyStatsElement) return;
+  
+  if (!weeklyStats) {
+    weeklyStatsElement.textContent = '주간 통계 데이터가 없습니다.';
+    return;
+  }
+
+  const summary = `
+    <div class="weekly-metric">
+      <h4>총 사용 시간</h4>
+      <p>${formatTime(weeklyStats.totalTime)}</p>
+    </div>
+    <div class="weekly-metric">
+      <h4>일 평균 사용 시간</h4>
+      <p>${formatTime(weeklyStats.avgDailyTime)}</p>
+    </div>
+    <div class="weekly-metric">
+      <h4>가장 많이 방문한 사이트</h4>
+      <ul class="top-sites-list">
+        ${weeklyStats.topSites.map(site => `
+          <li class="site-item">
+            <span class="site-name">${site.domain}</span>
+            <span class="site-time">${formatTime(site.time)}</span>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+  `;
+
+  weeklyStatsElement.innerHTML = summary;
+}
+
+function updateLimits(limits) {
+  const limitsElement = document.querySelector('.current-limits ul');
+  if (!limitsElement) return;
+  
+  if (!limits || limits.length === 0) {
+    limitsElement.innerHTML = '<li>설정된 시간 제한이 없습니다.</li>';
+    return;
+  }
+
+  limitsElement.innerHTML = limits
+    .map(limit => `<li class="limit-item">
+      <span class="site-name">${limit.domain}</span>
+      <span class="limit-info">
+        제한: ${formatTime(limit.limit)} / 
+        남은 시간: ${formatTime(limit.remaining)}
+      </span>
+    </li>`)
+    .join('');
+}
+
+function showError(message) {
+  const elements = [
+    '.total-time p',
+    '.top-sites ul',
+    '#weekly-stats',
+    '.current-limits ul'
+  ];
+
+  elements.forEach(selector => {
+    const element = document.querySelector(selector);
+    if (element) {
+      element.textContent = message;
+    }
+  });
+} 
