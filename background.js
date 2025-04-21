@@ -100,11 +100,17 @@ async function updateActiveTabTime() {
 
 // Check time limits based on goals
 function checkTimeLimits(domain, dailyTotalMinutes) {
-  if (goals[domain] && goals[domain].limit) {
+  if (goals[domain] && goals[domain].limit !== undefined) { // Check if limit is defined
       const limitInMinutes = goals[domain].limit;
+      console.log(`[checkTimeLimits] Checking domain: ${domain}, Daily Time: ${dailyTotalMinutes.toFixed(1)}m, Limit: ${limitInMinutes}m`);
       if (dailyTotalMinutes > limitInMinutes) {
+          console.log(`[checkTimeLimits] Limit EXCEEDED for ${domain}. Attempting notification.`);
           createNotification(domain, dailyTotalMinutes, limitInMinutes);
+      } else {
+          // console.log(`[checkTimeLimits] Limit OK for ${domain}.`);
       }
+  } else {
+      // console.log(`[checkTimeLimits] No limit set or applicable for domain: ${domain}`);
   }
 }
 
@@ -164,27 +170,38 @@ function shouldShowNotification(domain) {
 }
 
 function createNotification(domain, timeSpentMinutes, limitMinutes) {
-  if (!shouldShowNotification(domain)) return;
+  const shouldShow = shouldShowNotification(domain);
+  console.log(`[createNotification] Attempting for ${domain}. Should show? ${shouldShow}`);
+  
+  if (!shouldShow) return;
 
   const notificationId = `time-limit-${domain}-${Date.now()}`;
   const minutesSpent = Math.floor(timeSpentMinutes);
   const message = `You've spent ${minutesSpent} minutes on ${domain}. Your limit is ${limitMinutes} minutes.`;
-  
-  chrome.notifications.create(notificationId, {
+  const options = {
     type: 'basic',
-    iconUrl: 'images/icon128.png',
+    iconUrl: 'images/icon128.png', // Ensure this path is correct
     title: 'Time Limit Alert',
     message: message,
     buttons: [
       { title: 'Dismiss' },
-      { title: 'Add 15 Minutes' } // Changed label
+      { title: 'Add 15 Minutes' }
     ],
     requireInteraction: true,
     priority: 2
-  });
+  };
 
-  lastNotificationTime[domain] = Date.now();
-  notifications[notificationId] = { domain, limit: limitMinutes }; // Store limit used for notification
+  console.log(`[createNotification] Creating notification with ID: ${notificationId}, Options:`, options);
+  
+  chrome.notifications.create(notificationId, options, (createdNotificationId) => {
+      if (chrome.runtime.lastError) {
+          console.error(`[createNotification] Error creating notification: ${chrome.runtime.lastError.message}`);
+      } else {
+          console.log(`[createNotification] Notification created successfully: ${createdNotificationId}`);
+          lastNotificationTime[domain] = Date.now();
+          notifications[createdNotificationId] = { domain, limit: limitMinutes };
+      }
+  });
 }
 
 // Handle notification button clicks (adjust for new goal structure)
