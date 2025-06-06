@@ -162,6 +162,12 @@ function getRootDomain(url) {
   }
 }
 
+// Determine if a domain should be tracked
+function isTrackableDomain(domain) {
+  // Filter out internal Chrome pages or empty values
+  return domain && !domain.startsWith('chrome.');
+}
+
 // Notification function remains largely the same, uses limit from checkTimeLimits
 function shouldShowNotification(domain) {
   const now = Date.now();
@@ -235,7 +241,7 @@ async function handleTabActivation(tabId, url) {
     const newDomain = getRootDomain(url);
     const today = getYYYYMMDD();
 
-    if (newDomain) {
+    if (isTrackableDomain(newDomain)) {
         if (newDomain !== currentTabInfo.domain) {
             console.log(`Switching active domain to: ${newDomain}`);
             // Different domain, reset consecutive time and start time
