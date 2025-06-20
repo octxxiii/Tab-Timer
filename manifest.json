@@ -1,9 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Tab Timer",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Track your browser time and boost productivity. See how much time you spend on each website and improve your focus.",
-  "permissions": ["tabs", "storage", "notifications"],
+  "permissions": [
+    "tabs",
+    "storage",
+    "notifications"
+  ],
   "background": {
     "service_worker": "background.js"
   },
@@ -13,16 +17,23 @@
       "16": "images/icon16.png",
       "48": "images/icon48.png",
       "128": "images/icon128.png"
-    }
+    },
+    "default_title": "Tab Timer - 시간 추적기"
   },
   "icons": {
     "16": "images/icon16.png",
     "48": "images/icon48.png",
     "128": "images/icon128.png"
   },
-  "author": "Your Name",
+  "externally_connectable": {
+    "matches": [
+      "https://octxxiii.github.io/*",
+      "http://localhost:*/*"
+    ]
+  },
+  "author": "Tab Timer Team",
   "homepage_url": "https://octxxiii.github.io/tab-timer",
   "short_name": "Tab Timer",
   "offline_enabled": true,
   "minimum_chrome_version": "88"
-} 
+}

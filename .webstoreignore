@@ -1,0 +1,25 @@
+# 개발 관련 파일
+node_modules/
+tests/
+jest.config.js
+jest.setup.js
+.gitignore
+.git/
+
+# 문서 파일
+README.md
+USER_MANUAL.md
+STORE_LISTING.md
+LICENSE
+
+# 패키지 관련
+package.json
+package-lock.json
+
+# 기타
+.DS_Store
+*.zip
+.webstoreignore
+
+# 개발 중인 파일
+website/ 

@@ -1,127 +1,582 @@
 <!DOCTYPE html>
 <html>
+
 <head>
+  <meta charset="UTF-8">
   <title>Tab Timer</title>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR_PUBLISHER_ID"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <style>
-    body {
-      width: 300px;
-      padding: 10px;
-      font-family: Arial, sans-serif;
+    :root {
+      --primary: #2196f3;
+      --primary-dark: #1976d2;
+      --success: #4caf50;
+      --warning: #ff9800;
+      --danger: #f44336;
+      --text-primary: #212121;
+      --text-secondary: #757575;
+      --background: #ffffff;
+      --surface: #f5f5f5;
+      --border: #e0e0e0;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --radius: 12px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
+    [data-theme="dark"] {
+      --text-primary: #ffffff;
+      --text-secondary: #b0b0b0;
+      --background: #121212;
+      --surface: #1e1e1e;
+      --border: #333333;
+      --shadow: rgba(0, 0, 0, 0.3);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 380px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--background);
+      color: var(--text-primary);
+      transition: var(--transition);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: 24px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 0.5;
+      }
+
+      50% {
+        transform: scale(1.1);
+        opacity: 0.3;
+      }
+    }
+
+    .header-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .app-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .app-subtitle {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .theme-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      z-index: 2;
+    }
+
+    .theme-toggle:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+
+    .theme-toggle .material-icons-round {
+      color: white;
+      font-size: 20px;
+    }
+
     .container {
+      padding: 20px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      padding: 20px;
+      border-radius: var(--radius);
+      text-align: center;
+      transition: var(--transition);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px var(--shadow);
+    }
+
+    .stat-card.primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      grid-column: span 2;
+    }
+
+    .stat-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+      opacity: 0.9;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .domains-list {
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 25px;
+    }
+
+    .domain-item {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      transition: var(--transition);
+      cursor: pointer;
+    }
+
+    .domain-item:last-child {
+      border-bottom: none;
+    }
+
+    .domain-item:hover {
+      background: var(--background);
+    }
+
+    .domain-favicon {
+      width: 24px;
+      height: 24px;
+      margin-right: 12px;
+      border-radius: 4px;
+    }
+
+    .domain-info {
+      flex: 1;
+    }
+
+    .domain-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .domain-stats {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .domain-time {
+      text-align: right;
+    }
+
+    .time-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .time-percent {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .progress-ring {
+      width: 48px;
+      height: 48px;
+      transform: rotate(-90deg);
+    }
+
+    .progress-ring-circle {
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 3;
+    }
+
+    .progress-ring-progress {
+      fill: none;
+      stroke: var(--primary);
+      stroke-width: 3;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.5s ease;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .action-btn {
+      background: var(--surface);
+      border: none;
+      padding: 15px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: var(--transition);
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      align-items: center;
+      gap: 8px;
     }
-    .tab-item {
+
+    .action-btn:hover {
+      background: var(--primary);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px var(--shadow);
+    }
+
+    .action-btn .material-icons-round {
+      font-size: 24px;
+    }
+
+    .action-btn span {
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .time-limit-section {
+      background: var(--surface);
+      padding: 20px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+    }
+
+    .input-group {
       display: flex;
-      justify-content: space-between;
-      padding: 8px;
-      background: #f5f5f5;
-      border-radius: 4px;
+      gap: 10px;
+      margin-top: 15px;
     }
-    .stats {
-      margin-top: 10px;
-      padding: 10px;
-      background: #e3f2fd;
-      border-radius: 4px;
+
+    .input-field {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      transition: var(--transition);
+      background: var(--background);
+      color: var(--text-primary);
     }
-    .ad-container {
-      margin-top: 10px;
-      padding: 10px;
-      background: #fff3e0;
-      border-radius: 4px;
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+    }
+
+    .premium-banner {
+      background: linear-gradient(135deg, #7c4dff 0%, #651fff 100%);
+      color: white;
+      padding: 20px;
+      border-radius: var(--radius);
       text-align: center;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
     }
+
+    .premium-banner::before {
+      content: '✨';
+      position: absolute;
+      font-size: 60px;
+      opacity: 0.1;
+      top: -10px;
+      right: 20px;
+      transform: rotate(-15deg);
+    }
+
+    .premium-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
     .premium-features {
-      margin-top: 10px;
-      padding: 10px;
-      background: #e8eaf6;
-      border-radius: 4px;
-    }
-    .premium-btn {
-      background: #2196f3;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    .premium-btn:hover {
-      background: #1976d2;
-    }
-    .time-limit {
-      margin-top: 10px;
-      padding: 10px;
-      background: #fff3e0;
-      border-radius: 4px;
-    }
-    .time-limit-input {
       display: flex;
-      gap: 10px;
-      margin-top: 5px;
+      justify-content: center;
+      gap: 20px;
+      margin: 15px 0;
+      font-size: 13px;
     }
-    input[type="number"] {
-      width: 60px;
-      padding: 5px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
-    button {
-      background: #2196f3;
+
+    .notification {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--surface);
+      color: var(--text-primary);
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: transform 0.3s ease;
+      z-index: 1000;
+    }
+
+    .notification.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .notification.success {
+      background: var(--success);
       color: white;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 4px;
-      cursor: pointer;
     }
-    button:hover {
-      background: #1976d2;
+
+    .notification.error {
+      background: var(--danger);
+      color: white;
+    }
+
+    .loading {
+      display: flex;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state .material-icons-round {
+      font-size: 64px;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+
+    .empty-state p {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .empty-state small {
+      font-size: 14px;
+      opacity: 0.8;
     }
   </style>
 </head>
+
 <body>
-  <div class="container">
-    <h2>Tab Timer</h2>
-    <div id="tabsList"></div>
-    <div class="stats">
-      <h3>Today's Stats</h3>
-      <p>Total Time: <span id="totalTime">0h 0m</span></p>
-      <p>Most Used: <span id="mostUsed">-</span></p>
-    </div>
-    
-    <div class="time-limit">
-      <h3>시간 제한 설정</h3>
-      <div class="time-limit-input">
-        <input type="number" id="timeLimitMinutes" min="1" placeholder="분">
-        <button id="setTimeLimit">설정</button>
-      </div>
-      <div id="currentLimit"></div>
-    </div>
-    
-    <!-- AdSense Ad -->
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-YOUR_PUBLISHER_ID"
-         data-ad-slot="YOUR_AD_SLOT_ID"
-         data-ad-format="auto"></ins>
-    
-    <div class="premium-features">
-      <h3>Premium Features</h3>
-      <ul>
-        <li>Detailed Analytics</li>
-        <li>Weekly Reports</li>
-        <li>Export Data</li>
-        <li>Custom Goals</li>
-      </ul>
-      <button id="upgradeBtn" class="premium-btn">Upgrade Now - Only $4.99/month</button>
+  <div class="header">
+    <button class="theme-toggle" id="themeToggle">
+      <span class="material-icons-round">dark_mode</span>
+    </button>
+    <div class="header-content">
+      <h1 class="app-title">
+        <span class="material-icons-round">timer</span>
+        Tab Timer
+      </h1>
+      <p class="app-subtitle">당신의 시간을 더 가치있게</p>
     </div>
   </div>
+
+  <div class="container">
+    <!-- 통계 카드 -->
+    <div class="stats-grid">
+      <div class="stat-card primary">
+        <div class="stat-icon material-icons-round">schedule</div>
+        <div class="stat-value" id="totalTime">0분</div>
+        <div class="stat-label">오늘 총 사용 시간</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon material-icons-round">trending_up</div>
+        <div class="stat-value" id="sessionCount">0</div>
+        <div class="stat-label">세션</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon material-icons-round">language</div>
+        <div class="stat-value" id="domainCount">0</div>
+        <div class="stat-label">사이트</div>
+      </div>
+    </div>
+
+    <!-- 빠른 액션 -->
+    <div class="quick-actions">
+      <button class="action-btn" id="dashboardBtn">
+        <span class="material-icons-round">dashboard</span>
+        <span>대시보드</span>
+      </button>
+      <button class="action-btn" id="insightsBtn">
+        <span class="material-icons-round">insights</span>
+        <span>인사이트</span>
+      </button>
+      <button class="action-btn" id="exportBtn">
+        <span class="material-icons-round">download</span>
+        <span>내보내기</span>
+      </button>
+    </div>
+
+    <!-- 시간 제한 설정 -->
+    <div class="time-limit-section">
+      <h3 class="section-title">
+        <span class="material-icons-round">alarm</span>
+        시간 제한 설정
+      </h3>
+      <div id="currentLimit"></div>
+      <div class="input-group">
+        <input type="number" id="timeLimitMinutes" class="input-field" min="1" placeholder="분 단위로 입력">
+        <button id="setTimeLimit" class="btn-primary">
+          <span class="material-icons-round">check</span>
+          설정
+        </button>
+      </div>
+    </div>
+
+    <!-- 도메인별 사용 시간 -->
+    <h3 class="section-title">
+      <span class="material-icons-round">analytics</span>
+      사이트별 사용 시간
+    </h3>
+    <div id="tabsList" class="domains-list">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+
+    <!-- 프리미엄 배너 -->
+    <div class="premium-banner" id="premiumBanner">
+      <h3 class="premium-title">Tab Timer Premium</h3>
+      <div class="premium-features">
+        <div class="feature-item">
+          <span class="material-icons-round" style="font-size: 16px;">check_circle</span>
+          <span>무제한 통계</span>
+        </div>
+        <div class="feature-item">
+          <span class="material-icons-round" style="font-size: 16px;">check_circle</span>
+          <span>AI 인사이트</span>
+        </div>
+        <div class="feature-item">
+          <span class="material-icons-round" style="font-size: 16px;">check_circle</span>
+          <span>클라우드 동기화</span>
+        </div>
+      </div>
+      <button id="upgradeBtn" class="btn-primary" style="margin: 0 auto;">
+        <span class="material-icons-round">star</span>
+        업그레이드하기
+      </button>
+    </div>
+  </div>
+
   <script src="popup.js"></script>
-  <script>
-    (adsbygoogle = window.adsbygoogle || []).push({});
-  </script>
 </body>
-</html> 
+
+</html>
