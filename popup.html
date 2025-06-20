@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Tab Timer</title>
+<<<<<<< HEAD
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <style>
@@ -473,9 +474,17 @@
       opacity: 0.8;
     }
   </style>
+=======
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+>>>>>>> 50c445f804731a36dabad14ec59bddb6d0b7531e
 </head>
 
 <body>
+<<<<<<< HEAD
   <div class="header">
     <button class="theme-toggle" id="themeToggle">
       <span class="material-icons-round">dark_mode</span>
@@ -506,6 +515,32 @@
         <div class="stat-icon material-icons-round">language</div>
         <div class="stat-value" id="domainCount">0</div>
         <div class="stat-label">사이트</div>
+=======
+  <div class="container">
+    <h2>Tab Timer</h2>
+    <div id="tabsList"></div>
+    <div id="showMore" class="show-more hidden">Show More</div>
+    <div class="stats">
+      <h3>Today's Stats</h3>
+      <p>Total Time: <span id="totalTime">0h 0m</span></p>
+      <p>Most Used: <span id="mostUsed">-</span></p>
+    </div>
+    
+    <button id="openDashboardButton" class="dashboard-button">
+      <i class="fas fa-chart-bar"></i> View Full Dashboard
+    </button>
+
+    <div class="time-limit">
+      <h3>Time Limit Settings</h3>
+      <div class="time-limit-input">
+        <select id="limitType">
+          <option value="current">Current Site</option>
+          <option value="custom">Custom Site</option>
+        </select>
+        <input type="text" id="siteUrl" placeholder="example.com" class="hidden">
+        <input type="number" id="timeLimitMinutes" min="1" placeholder="minutes">
+        <button id="setTimeLimit">Set</button>
+>>>>>>> 50c445f804731a36dabad14ec59bddb6d0b7531e
       </div>
     </div>
 
@@ -532,6 +567,7 @@
         시간 제한 설정
       </h3>
       <div id="currentLimit"></div>
+<<<<<<< HEAD
       <div class="input-group">
         <input type="number" id="timeLimitMinutes" class="input-field" min="1" placeholder="분 단위로 입력">
         <button id="setTimeLimit" class="btn-primary">
@@ -573,10 +609,17 @@
         <span class="material-icons-round">star</span>
         업그레이드하기
       </button>
+=======
+      <div id="limitsList" class="limits-list"></div>
+>>>>>>> 50c445f804731a36dabad14ec59bddb6d0b7531e
     </div>
   </div>
 
   <script src="popup.js"></script>
+<<<<<<< HEAD
+=======
+  <script src="tab.js"></script>
+>>>>>>> 50c445f804731a36dabad14ec59bddb6d0b7531e
 </body>
 
 </html>

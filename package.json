@@ -1,13 +1,22 @@
 {
-  "name": "tab-timer",
+  "name": "tab-timer-extension",
   "version": "1.0.0",
-  "description": "Chrome extension for time management",
+  "description": "A Chrome extension to track time spent on different tabs",
+  "main": "background.js",
   "scripts": {
-    "test": "jest",
-    "build": "cp -r website/* dist/",
-    "prebuild": "mkdir -p dist"
+    "test": "jest --detectOpenHandles",
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development --watch"
   },
+  "keywords": [
+    "chrome-extension",
+    "time-tracking",
+    "productivity"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
   "devDependencies": {
+<<<<<<< HEAD
     "jest": "^29.7.0",
     "jest-puppeteer": "^9.0.2",
     "puppeteer": "^24.6.1"
@@ -321,4 +330,22 @@
     "url": "https://github.com/octxxiii/tab-timer/issues"
   },
   "homepage": "https://github.com/octxxiii/tab-timer#readme"
+=======
+    "@babel/core": "^7.22.0",
+    "@babel/plugin-transform-runtime": "^7.22.0",
+    "@babel/preset-env": "^7.22.0",
+    "@babel/runtime": "^7.22.0",
+    "babel-jest": "^29.0.0",
+    "babel-loader": "^9.1.2",
+    "css-loader": "^6.8.1",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^29.0.0",
+    "jest-environment-jsdom": "^29.0.0",
+    "jsdom": "^22.0.0",
+    "puppeteer": "^24.6.1",
+    "style-loader": "^3.3.3",
+    "webpack": "^5.85.0",
+    "webpack-cli": "^5.1.1"
+  }
+>>>>>>> 50c445f804731a36dabad14ec59bddb6d0b7531e
 }

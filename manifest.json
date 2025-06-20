@@ -4,9 +4,21 @@
   "version": "2.0.0",
   "description": "Track your browser time and boost productivity. See how much time you spend on each website and improve your focus.",
   "permissions": [
+<<<<<<< HEAD
     "tabs",
     "storage",
     "notifications"
+=======
+    "storage",
+    "tabs",
+    "activeTab",
+    "notifications",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "https://octxxiii.github.io/*"
+>>>>>>> 50c445f804731a36dabad14ec59bddb6d0b7531e
   ],
   "background": {
     "service_worker": "background.js"
@@ -25,6 +37,7 @@
     "48": "images/icon48.png",
     "128": "images/icon128.png"
   },
+<<<<<<< HEAD
   "externally_connectable": {
     "matches": [
       "https://octxxiii.github.io/*",
@@ -32,6 +45,12 @@
     ]
   },
   "author": "Tab Timer Team",
+=======
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "author": "Your Name",
+>>>>>>> 50c445f804731a36dabad14ec59bddb6d0b7531e
   "homepage_url": "https://octxxiii.github.io/tab-timer",
   "short_name": "Tab Timer",
   "offline_enabled": true,

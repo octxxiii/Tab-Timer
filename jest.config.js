@@ -1,6 +1,18 @@
 module.exports = {
-  preset: 'jest-puppeteer',
-  testMatch: ['**/tests/**/*.test.js'],
-  testTimeout: 30000,
-  setupFilesAfterEnv: ['./jest.setup.js']
+  testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ['<rootDir>/tests/setupAfterEnv.js'],
+  transform: {
+    '^.+\\.jsx?$': 'babel-jest'
+  },
+  testMatch: [
+    '<rootDir>/tests/**/*.test.js'
+  ],
+  moduleNameMapper: {
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
+  },
+  collectCoverage: true,
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov'],
+  verbose: true,
+  testTimeout: 60000
 }; 

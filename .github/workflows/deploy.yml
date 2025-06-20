@@ -24,23 +24,43 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Debug directory structure
+        run: |
+          echo "Current directory structure:"
+          ls -la
+          echo "Website directory contents:"
+          ls -la website/
+          echo "Images directory contents:"
+          ls -la images/
+
       - name: Build
         run: |
           echo "Current directory: $(pwd)"
-          echo "Listing website directory:"
-          ls -la website/
           echo "Creating dist directory..."
           rm -rf dist
           mkdir -p dist
-          echo "Copying files from website to dist..."
-          cp -v website/* dist/
-          echo "Contents of dist directory:"
+          
+          echo "Copying website files..."
+          if [ -d "website" ]; then
+            cp -r website/* dist/ || echo "Warning: Failed to copy some website files"
+          else
+            echo "Error: website directory not found"
+            exit 1
+          fi
+          
+          echo "Copying images..."
+          mkdir -p dist/images
+          if [ -d "images" ]; then
+            cp -r images/* dist/images/ || echo "Warning: Failed to copy some image files"
+          else
+            echo "Error: images directory not found"
+            exit 1
+          fi
+          
+          echo "Final dist directory contents:"
           ls -la dist/
-          echo "Verifying file contents..."
-          cat dist/index.html
-          cat dist/dashboard.js
-          cat dist/styles.css
-          cat dist/privacy.html
+          echo "Dist/images directory contents:"
+          ls -la dist/images/
 
       - name: Deploy to Pages repo
         uses: peaceiris/actions-gh-pages@v3

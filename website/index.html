@@ -3,62 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tab Timer - 시간 관리 대시보드</title>
+    <title>Tab Timer - 웹 사이트 사용 시간 관리 확장 프로그램</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Tab Timer 대시보드</h1>
-            <nav>
+    <header>
+        <div class="container">
+            <img src="images/icon128.png" alt="Tab Timer Logo" class="logo">
+            <h1>Tab Timer</h1>
+            <p class="subtitle">웹 사이트 사용 시간 관리 확장 프로그램</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="intro">
+            <h2>소개</h2>
+            <p>Tab Timer는 웹 브라우저에서 각 사이트별 사용 시간을 추적하고 관리할 수 있는 Chrome 확장 프로그램입니다. 생산성 향상과 디지털 웰빙을 위해 웹사이트 사용 시간을 모니터링하고 제한할 수 있습니다.</p>
+        </section>
+
+        <section class="features">
+            <h2>주요 기능</h2>
+            <ul>
+                <li>🕒 실시간 사용 시간 추적</li>
+                <li>⏰ 사이트별 시간 제한 설정</li>
+                <li>🔔 시간 제한 도달 시 알림</li>
+                <li>📊 일일 사용 통계 확인</li>
+                <li>🌐 모든 웹사이트 지원</li>
+            </ul>
+        </section>
+
+        <section class="installation">
+            <h2>설치 방법</h2>
+            <ol>
+                <li><a href="https://chrome.google.com/webstore">Chrome 웹 스토어</a>에서 "Tab Timer" 검색</li>
+                <li>"Chrome에 추가" 버튼 클릭</li>
+                <li>설치 완료 후 Chrome 툴바에서 Tab Timer 아이콘 확인</li>
+            </ol>
+        </section>
+
+        <section class="usage">
+            <h2>사용 방법</h2>
+            
+            <div class="usage-section">
+                <h3>시간 추적</h3>
                 <ul>
-                    <li><a href="#daily">일간 통계</a></li>
-                    <li><a href="#weekly">주간 통계</a></li>
-                    <li><a href="#goals">목표 설정</a></li>
+                    <li>자동으로 모든 웹사이트의 사용 시간이 추적됩니다</li>
+                    <li>팝업 창에서 실시간 사용 시간 확인 가능</li>
                 </ul>
-            </nav>
-        </header>
+            </div>
 
-        <main>
-            <section id="daily" class="dashboard-section">
-                <h2>일간 통계</h2>
-                <div class="chart-container">
-                    <canvas id="dailyChart"></canvas>
-                </div>
-            </section>
+            <div class="usage-section">
+                <h3>시간 제한 설정</h3>
+                <ul>
+                    <li>특정 사이트 방문 시 "Set Time Limit" 클릭</li>
+                    <li>원하는 시간(분) 입력</li>
+                    <li>"Set" 버튼 클릭</li>
+                </ul>
+            </div>
 
-            <section id="weekly" class="dashboard-section">
-                <h2>주간 통계</h2>
-                <div class="chart-container">
-                    <canvas id="weeklyChart"></canvas>
-                </div>
-            </section>
+            <div class="usage-section">
+                <h3>알림 기능</h3>
+                <ul>
+                    <li>시간 제한 도달 시 자동 알림</li>
+                    <li>알림음 및 시각적 효과 제공</li>
+                    <li>"5분 더 사용" 또는 "닫기" 선택 가능</li>
+                    <li>탭을 닫으면 관련 알림 자동 제거</li>
+                </ul>
+            </div>
+        </section>
 
-            <section id="goals" class="dashboard-section">
-                <h2>목표 설정</h2>
-                <div class="goals-container">
-                    <form id="goalForm">
-                        <div class="form-group">
-                            <label for="website">웹사이트</label>
-                            <input type="text" id="website" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="timeLimit">시간 제한 (분)</label>
-                            <input type="number" id="timeLimit" min="1" required>
-                        </div>
-                        <button type="submit">목표 설정</button>
-                    </form>
-                </div>
-            </section>
-        </main>
+        <section class="privacy">
+            <h2>개인정보 보호</h2>
+            <ul>
+                <li>모든 데이터는 사용자의 로컬 기기에만 저장됩니다</li>
+                <li>외부 서버로 데이터 전송이 없습니다</li>
+                <li>오프라인에서도 정상 작동합니다</li>
+            </ul>
+        </section>
 
-        <footer>
-            <p>© 2025 Tab Timer. All rights reserved.</p>
-        </footer>
-    </div>
+        <section class="tech-stack">
+            <h2>기술 스택</h2>
+            <ul>
+                <li>Chrome Extension API</li>
+                <li>JavaScript (ES6+)</li>
+                <li>HTML5 & CSS3</li>
+                <li>Local Storage</li>
+            </ul>
+        </section>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="dashboard.js"></script>
+        <section class="dashboard-link">
+            <h2>디지털 웰빙 대시보드</h2>
+            <p>사용 시간 통계와 웰빙 인사이트를 확인하세요.</p>
+            <a href="dashboard.html" class="button">대시보드 바로가기</a>
+        </section>
+    </main>
+
+    <footer class="container">
+        <p>이 프로젝트는 MIT 라이선스를 따릅니다.</p>
+        <div class="links">
+            <a href="https://github.com/octxxiii/tab-timer">GitHub</a>
+            <a href="privacy.html">개인정보 처리방침</a>
+        </div>
+    </footer>
 </body>
 </html> 
