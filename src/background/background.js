@@ -360,33 +360,68 @@ function shouldShowNotification(domain) {
   return !lastNotificationTime[domain] || (now - lastNotificationTime[domain]) > 5 * 60 * 1000;
 }
 
+// 알림 다국어 텍스트
+const notificationTranslations = {
+  ko: {
+    title: '시간 제한 알림',
+    message: (domain, minutes, limit) => `${domain}에서 ${minutes}분 사용했습니다. 설정된 제한은 ${limit}분입니다.`,
+    add15min: '15분 추가',
+    closeTab: '눈물을 머금고 탭 닫기',
+    closeNotification: '알림 닫기',
+    extendedTitle: '시간 제한 연장',
+    extendedMessage: (domain, limit) => `${domain}의 시간 제한이 ${limit}분으로 연장되었습니다.`
+  },
+  en: {
+    title: 'Time Limit Alert',
+    message: (domain, minutes, limit) => `You've used ${minutes} minutes on ${domain}. Your limit is ${limit} minutes.`,
+    add15min: 'Add 15 min',
+    closeTab: 'Close Tab (with tears)',
+    closeNotification: 'Close',
+    extendedTitle: 'Time Limit Extended',
+    extendedMessage: (domain, limit) => `Time limit for ${domain} has been extended to ${limit} minutes.`
+  }
+};
+
+async function getNotificationTexts() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['language'], (result) => {
+      const lang = result.language || 'ko';
+      resolve(notificationTranslations[lang] || notificationTranslations.ko);
+    });
+  });
+}
+
 function createNotification(domain, timeSpentMinutes, limitMinutes) {
   if (!shouldShowNotification(domain)) return;
 
-  const notificationId = `time-limit-${domain}-${Date.now()}`;
-  const minutesSpent = Math.floor(timeSpentMinutes);
-  const message = `${domain}에서 ${minutesSpent}분 사용했습니다. 설정된 제한은 ${limitMinutes}분입니다.`;
-  const options = {
-    type: 'basic',
-    iconUrl: 'images/icon128.png',
-    title: '시간 제한 알림',
-    message: message,
-    buttons: [
-      { title: '닫기' },
-      { title: '설정 열기' }
-    ],
-    requireInteraction: true,
-    priority: 2
-  };
+  getNotificationTexts().then((texts) => {
+    const notificationId = `time-limit-${domain}-${Date.now()}`;
+    const minutesSpent = Math.floor(timeSpentMinutes);
+    const message = texts.message(domain, minutesSpent, limitMinutes);
+    
+    const options = {
+      type: 'basic',
+      iconUrl: 'images/icon128.png',
+      title: texts.title,
+      message: message,
+      buttons: [
+        { title: texts.add15min },
+        { title: texts.closeTab },
+        { title: texts.closeNotification }
+      ],
+      requireInteraction: true,
+      priority: 2
+    };
 
-  chrome.notifications.create(notificationId, options, (createdNotificationId) => {
-    if (chrome.runtime.lastError) {
-      console.error(`[createNotification] Error: ${chrome.runtime.lastError.message}`);
-    } else {
-      console.log(`[createNotification] Notification created: ${createdNotificationId}`);
-      lastNotificationTime[domain] = Date.now();
-      notifications[createdNotificationId] = { domain, limit: limitMinutes };
-    }
+    chrome.notifications.create(notificationId, options, (createdNotificationId) => {
+      if (chrome.runtime.lastError) {
+        console.error(`[createNotification] Error: ${chrome.runtime.lastError.message}`);
+      } else {
+        console.log(`[createNotification] Notification created: ${createdNotificationId}`);
+        lastNotificationTime[domain] = Date.now();
+        notifications[createdNotificationId] = { domain, limit: limitMinutes };
+      }
+    });
   });
 }
 
@@ -394,18 +429,65 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
   const notificationInfo = notifications[notificationId];
   if (!notificationInfo) return;
 
-  // buttonIndex 0: 닫기, buttonIndex 1: 설정 열기
-  if (buttonIndex === 1) {
-    // 설정 탭 열기 (popup 열기)
-    try {
-      chrome.action.openPopup();
-    } catch (error) {
-      // popup을 열 수 없으면 (예: 사용자가 클릭해야 함) 확장 프로그램 페이지로 이동
-      chrome.tabs.create({
-        url: chrome.runtime.getURL('popup.html')
+  const { domain, limit } = notificationInfo;
+  const texts = await getNotificationTexts();
+
+  // buttonIndex 0: 15분 추가, buttonIndex 1: 눈물을 머금고 탭 닫기, buttonIndex 2: 알림 닫기
+  if (buttonIndex === 0) {
+    // 15분 추가: 시간 제한을 15분 연장
+    chrome.storage.local.get(['goals'], (result) => {
+      let currentGoals = result.goals || {};
+      const currentLimit = currentGoals[domain]?.limit || limit;
+      const newLimit = currentLimit + 15;
+      
+      currentGoals[domain] = {
+        ...currentGoals[domain],
+        limit: newLimit,
+        category: currentGoals[domain]?.category || 'other',
+        priority: currentGoals[domain]?.priority || 'medium'
+      };
+      
+      goals = currentGoals;
+      chrome.storage.local.set({ goals: currentGoals }).then(() => {
+        console.log(`[Notification] Extended time limit for ${domain}: ${currentLimit}분 → ${newLimit}분`);
+        // 알림 업데이트로 확인 메시지 표시
+        chrome.notifications.create(`extended-${Date.now()}`, {
+          type: 'basic',
+          iconUrl: 'images/icon128.png',
+          title: texts.extendedTitle,
+          message: texts.extendedMessage(domain, newLimit),
+          priority: 1
+        });
+      }).catch(err => {
+        console.error('Error extending time limit:', err);
       });
+    });
+  } else if (buttonIndex === 1) {
+    // 눈물을 머금고 탭 닫기: 현재 도메인의 모든 탭 닫기
+    try {
+      const allTabs = await chrome.tabs.query({});
+      const tabsToClose = allTabs.filter(tab => {
+        if (!tab.url) return false;
+        try {
+          const tabDomain = getRootDomain(tab.url);
+          return tabDomain === domain;
+        } catch (e) {
+          return false;
+        }
+      });
+      
+      if (tabsToClose.length > 0) {
+        const tabIds = tabsToClose.map(tab => tab.id);
+        await chrome.tabs.remove(tabIds);
+        console.log(`[Notification] Closed ${tabsToClose.length} tab(s) for ${domain}`);
+      } else {
+        console.log(`[Notification] No tabs found for ${domain}`);
+      }
+    } catch (error) {
+      console.error('Error closing tabs:', error);
     }
   }
+  // buttonIndex === 2: 알림 닫기 (아무 작업 없이 알림만 닫기)
 
   chrome.notifications.clear(notificationId);
   delete notifications[notificationId];
