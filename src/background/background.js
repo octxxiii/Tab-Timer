@@ -406,8 +406,7 @@ function createNotification(domain, timeSpentMinutes, limitMinutes) {
       message: message,
       buttons: [
         { title: texts.add15min },
-        { title: texts.closeTab },
-        { title: texts.closeNotification }
+        { title: texts.closeTab }
       ],
       requireInteraction: true,
       priority: 2
@@ -432,7 +431,8 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
   const { domain, limit } = notificationInfo;
   const texts = await getNotificationTexts();
 
-  // buttonIndex 0: 15분 추가, buttonIndex 1: 눈물을 머금고 탭 닫기, buttonIndex 2: 알림 닫기
+  // buttonIndex 0: 15분 추가, buttonIndex 1: 눈물을 머금고 탭 닫기
+  // 알림 닫기는 알림 자체를 클릭하거나 X 버튼으로 닫을 수 있음
   if (buttonIndex === 0) {
     // 15분 추가: 시간 제한을 15분 연장
     chrome.storage.local.get(['goals'], (result) => {
@@ -487,7 +487,7 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
       console.error('Error closing tabs:', error);
     }
   }
-  // buttonIndex === 2: 알림 닫기 (아무 작업 없이 알림만 닫기)
+  // 알림 닫기는 알림 자체를 클릭하거나 X 버튼으로 닫을 수 있음
 
   chrome.notifications.clear(notificationId);
   delete notifications[notificationId];
