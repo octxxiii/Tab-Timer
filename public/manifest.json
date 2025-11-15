@@ -9,10 +9,6 @@
     "activeTab",
     "notifications"
   ],
-  "host_permissions": [
-    "<all_urls>",
-    "https://octxxiii.github.io/*"
-  ],
   "background": {
     "service_worker": "background.js"
   },
