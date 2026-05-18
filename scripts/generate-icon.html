@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Receipt – Icon Generator</title>
+<style>
+  body { background:#1a1a1a; font-family:'Space Mono',monospace; padding:32px; color:#fff; }
+  .row { display:flex; gap:24px; align-items:flex-end; flex-wrap:wrap; margin:24px 0; }
+  canvas { image-rendering:pixelated; }
+  .label { font-size:10px; color:#555; letter-spacing:2px; margin-top:8px; text-align:center; }
+  button { background:#6c63ff; color:#fff; border:none; padding:10px 20px; border-radius:4px;
+           font-family:'Space Mono',monospace; font-size:11px; cursor:pointer; margin:4px; }
+  button:hover { background:#5a52d5; }
+  h2 { font-size:11px; letter-spacing:3px; color:#444; margin:32px 0 8px; }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<span style="font-size:10px;letter-spacing:4px;color:#444">🧾 RECEIPT ICON GENERATOR</span>
+
+<h2>PREVIEW — ALL SIZES</h2>
+<div class="row" id="previews"></div>
+
+<h2>DOWNLOAD</h2>
+<div>
+  <button onclick="download(128)">⬇ icon128.png</button>
+  <button onclick="download(48)">⬇ icon48.png</button>
+  <button onclick="download(16)">⬇ icon16.png</button>
+  <button onclick="downloadAll()">⬇ 전체 다운로드</button>
+  <button onclick="downloadSVG()">⬇ icon.svg</button>
+</div>
+
+<h2>VARIATIONS</h2>
+<div class="row" id="variants"></div>
+
+<script>
+// Draw the Receipt icon at any size
+// Design: dark rounded-square bg, white receipt paper with lines + zigzag bottom
+function drawIcon(ctx, size, variant = 'dark') {
+  const s = size;
+  const r = s * 0.22; // corner radius
+
+  ctx.clearRect(0, 0, s, s);
+
+  // Background
+  const bg = variant === 'dark' ? '#0d0d0d'
+           : variant === 'purple' ? '#1a1033'
+           : variant === 'white' ? '#ffffff'
+           : '#0d0d0d';
+
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(s - r, 0);
+  ctx.quadraticCurveTo(s, 0, s, r);
+  ctx.lineTo(s, s - r);
+  ctx.quadraticCurveTo(s, s, s - r, s);
+  ctx.lineTo(r, s);
+  ctx.quadraticCurveTo(0, s, 0, s - r);
+  ctx.lineTo(0, r);
+  ctx.quadraticCurveTo(0, 0, r, 0);
+  ctx.closePath();
+  ctx.fillStyle = bg;
+  ctx.fill();
+
+  // Subtle gradient overlay
+  if (variant !== 'white') {
+    const grad = ctx.createLinearGradient(0, 0, s, s);
+    grad.addColorStop(0, 'rgba(255,255,255,0.05)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.2)');
+    ctx.beginPath();
+    ctx.moveTo(r, 0); ctx.lineTo(s-r,0);
+    ctx.quadraticCurveTo(s,0,s,r); ctx.lineTo(s,s-r);
+    ctx.quadraticCurveTo(s,s,s-r,s); ctx.lineTo(r,s);
+    ctx.quadraticCurveTo(0,s,0,s-r); ctx.lineTo(0,r);
+    ctx.quadraticCurveTo(0,0,r,0); ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  // ── Receipt paper ──────────────────────────────────────
+  const pw = s * 0.54;   // paper width
+  const ph = s * 0.62;   // paper height
+  const px = (s - pw) / 2;
+  const py = s * 0.12;
+
+  // Paper shadow
+  if (s >= 32) {
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = s * 0.06;
+    ctx.shadowOffsetY = s * 0.03;
+  }
+
+  // Paper body (straight top, zigzag bottom)
+  const zigCount = 5;
+  const zigH = s * 0.055;
+  const zigW = pw / zigCount;
+
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  ctx.lineTo(px + pw, py);
+  ctx.lineTo(px + pw, py + ph);
+
+  // zigzag bottom (right to left)
+  for (let i = zigCount; i > 0; i--) {
+    const x1 = px + i * zigW;
+    const x2 = px + (i - 0.5) * zigW;
+    ctx.lineTo(x1, py + ph);
+    ctx.lineTo(x2, py + ph + zigH);
+  }
+  ctx.lineTo(px, py + ph);
+  ctx.closePath();
+
+  const paperColor = variant === 'white' ? '#f0f0ee' : '#f5f5f2';
+  ctx.fillStyle = paperColor;
+  ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+
+  // ── Lines on paper (receipt text) ──────────────────────
+  if (s >= 32) {
+    const lineColor = variant === 'white' ? '#cccccc' : '#d0d0cc';
+    const lx = px + pw * 0.12;
+    const lw = pw * 0.76;
+    const lineY = [0.18, 0.30, 0.42, 0.54, 0.66];
+
+    lineY.forEach((frac, i) => {
+      const ly = py + ph * frac;
+      if (i === 0) {
+        // Top line: bold/header
+        ctx.fillStyle = variant === 'white' ? '#aaaaaa' : '#b8b8b4';
+        ctx.fillRect(lx, ly, lw, s * 0.025);
+      } else if (i === lineY.length - 1) {
+        // Bottom line: total (wider + thicker)
+        ctx.fillStyle = variant === 'white' ? '#999999' : '#a0a09c';
+        ctx.fillRect(lx, ly, lw * 0.55, s * 0.02);
+        ctx.fillRect(lx + lw * 0.6, ly, lw * 0.4, s * 0.028);
+      } else {
+        // Regular rows: two segments (name + amount)
+        ctx.fillStyle = lineColor;
+        ctx.fillRect(lx, ly, lw * 0.58, s * 0.018);
+        ctx.fillRect(lx + lw * 0.65, ly, lw * 0.35, s * 0.018);
+      }
+    });
+
+    // Dashed separator line
+    const sepY = py + ph * 0.72;
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = s * 0.012;
+    ctx.setLineDash([s * 0.04, s * 0.04]);
+    ctx.beginPath();
+    ctx.moveTo(lx, sepY);
+    ctx.lineTo(lx + lw, sepY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  } else {
+    // Small size: just solid lines
+    const lx = px + pw * 0.15;
+    const lw = pw * 0.7;
+    ctx.fillStyle = '#cccccc';
+    ctx.fillRect(lx, py + ph * 0.2, lw, 1);
+    ctx.fillRect(lx, py + ph * 0.4, lw * 0.6, 1);
+    ctx.fillRect(lx + lw * 0.65, py + ph * 0.4, lw * 0.35, 1);
+    ctx.fillRect(lx, py + ph * 0.58, lw * 0.6, 1);
+    ctx.fillRect(lx + lw * 0.65, py + ph * 0.58, lw * 0.35, 1);
+  }
+
+  // ── Accent dot / brand mark ───────────────────────────
+  if (s >= 48) {
+    const accentColor = variant === 'purple' ? '#6c63ff' : '#6c63ff';
+    const dotR = s * 0.055;
+    const dotX = px + pw * 0.5;
+    const dotY = py - dotR * 0.5;
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, dotR, 0, Math.PI * 2);
+    ctx.fillStyle = accentColor;
+    ctx.fill();
+
+    // pin shadow
+    ctx.beginPath();
+    ctx.arc(dotX, dotY + dotR * 0.5, dotR * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fill();
+  }
+}
+
+// Render all preview canvases
+function renderPreviews() {
+  const container = document.getElementById('previews');
+  container.innerHTML = '';
+
+  [[128, 'dark'], [48, 'dark'], [32, 'dark'], [16, 'dark']].forEach(([size, v]) => {
+    const wrap = document.createElement('div');
+    const c = document.createElement('canvas');
+    c.width = size; c.height = size;
+    c.style.width = `${Math.max(size, 64)}px`;
+    c.style.height = `${Math.max(size, 64)}px`;
+    const ctx = c.getContext('2d');
+    drawIcon(ctx, size, v);
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = `${size}×${size}`;
+    wrap.appendChild(c);
+    wrap.appendChild(label);
+    container.appendChild(wrap);
+    c.addEventListener('click', () => download(size));
+  });
+}
+
+// Render variant previews
+function renderVariants() {
+  const container = document.getElementById('variants');
+  container.innerHTML = '';
+
+  [['dark','Dark (default)'], ['purple','Purple'], ['white','Light']].forEach(([v, label]) => {
+    const wrap = document.createElement('div');
+    const c = document.createElement('canvas');
+    c.width = 128; c.height = 128;
+    c.style.width = '128px'; c.style.height = '128px';
+    const ctx = c.getContext('2d');
+    drawIcon(ctx, 128, v);
+    const lbl = document.createElement('div');
+    lbl.className = 'label';
+    lbl.textContent = label;
+    wrap.appendChild(c);
+    wrap.appendChild(lbl);
+    container.appendChild(wrap);
+  });
+}
+
+function download(size) {
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  drawIcon(c.getContext('2d'), size);
+  const a = document.createElement('a');
+  a.download = `icon${size}.png`;
+  a.href = c.toDataURL('image/png');
+  a.click();
+}
+
+function downloadAll() {
+  [128, 48, 16].forEach(size => setTimeout(() => download(size), size));
+}
+
+function downloadSVG() {
+  // Inline SVG version
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="128" height="128" rx="28" fill="#0d0d0d"/>
+  <rect width="128" height="128" rx="28" fill="url(#bg_grad)" opacity="0.5"/>
+
+  <!-- Paper shadow -->
+  <rect x="38" y="18" width="52" height="77" rx="2" fill="rgba(0,0,0,0.4)" transform="translate(2,3)"/>
+
+  <!-- Receipt paper body -->
+  <path d="M38,15 L90,15 L90,78
+    L90,78 L84.8,88.0 L79.6,78 L74.4,88.0 L69.2,78 L64.0,88.0 L58.8,78 L53.6,88.0 L48.4,78 L43.2,88.0 L38,78
+    Z" fill="#f5f5f2"/>
+
+  <!-- Header line -->
+  <rect x="46" y="25" width="36" height="3" rx="1" fill="#b0b0ac"/>
+
+  <!-- Row 1 -->
+  <rect x="46" y="35" width="21" height="2" rx="1" fill="#d0d0cc"/>
+  <rect x="71" y="35" width="13" height="2" rx="1" fill="#d0d0cc"/>
+
+  <!-- Row 2 -->
+  <rect x="46" y="44" width="21" height="2" rx="1" fill="#d0d0cc"/>
+  <rect x="71" y="44" width="13" height="2" rx="1" fill="#d0d0cc"/>
+
+  <!-- Row 3 -->
+  <rect x="46" y="53" width="21" height="2" rx="1" fill="#d0d0cc"/>
+  <rect x="71" y="53" width="13" height="2" rx="1" fill="#d0d0cc"/>
+
+  <!-- Dashed separator -->
+  <line x1="46" y1="62" x2="82" y2="62" stroke="#d0d0cc" stroke-width="1.5" stroke-dasharray="4,4"/>
+
+  <!-- Total row -->
+  <rect x="46" y="70" width="20" height="2.5" rx="1" fill="#a0a09c"/>
+  <rect x="69" y="69" width="15" height="3.5" rx="1" fill="#909090"/>
+
+  <!-- Accent pin -->
+  <circle cx="64" cy="12" r="7" fill="#6c63ff"/>
+  <ellipse cx="64" cy="15.5" rx="3" ry="1.5" fill="rgba(0,0,0,0.25)"/>
+
+  <defs>
+    <linearGradient id="bg_grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="white" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="black" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+</svg>`;
+  const blob = new Blob([svg], {type:'image/svg+xml'});
+  const a = document.createElement('a');
+  a.download = 'icon.svg';
+  a.href = URL.createObjectURL(blob);
+  a.click();
+}
+
+window.addEventListener('load', () => {
+  renderPreviews();
+  renderVariants();
+});
+</script>
+</body>
+</html>

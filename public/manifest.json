@@ -1,13 +1,22 @@
 {
   "manifest_version": 3,
-  "name": "Tab Timer",
-  "version": "2.0.0",
-  "description": "Track your browser time and boost productivity. See how much time you spend on each website and improve your focus.",
+  "name": "Receipt",
+  "version": "2.1.0",
+  "description": "Your daily browser receipt. See exactly where your time goes — and share the truth.",
   "permissions": [
     "storage",
     "tabs",
     "activeTab",
-    "notifications"
+    "notifications",
+    "idle",
+    "alarms"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["blocker.js"],
+      "run_at": "document_idle"
+    }
   ],
   "background": {
     "service_worker": "background.js"
@@ -19,7 +28,7 @@
       "48": "images/icon48.png",
       "128": "images/icon128.png"
     },
-    "default_title": "Tab Timer - 시간 추적기"
+    "default_title": "Receipt - 오늘의 영수증"
   },
   "icons": {
     "16": "images/icon16.png",
@@ -35,9 +44,9 @@
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
-  "author": "Tab Timer Team",
+  "author": "Receipt",
   "homepage_url": "https://octxxiii.github.io/tab-timer",
-  "short_name": "Tab Timer",
+  "short_name": "Receipt",
   "offline_enabled": true,
   "minimum_chrome_version": "88"
 }
