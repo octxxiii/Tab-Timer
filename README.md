@@ -1,143 +1,141 @@
-# Tab Timer - 웹 사이트 사용 시간 관리 확장 프로그램
+# 🧾 Receipt — Your Daily Browser Receipt
 
-![Tab Timer Logo](images/icon128.png)
+> See exactly where your time goes. Block distractions. Share the truth.
+
+[![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Receipt-6c63ff?style=flat-square&logo=google-chrome)](https://chromewebstore.google.com/detail/receipt/bkpigoodgcpamgbeci...)
+[![Version](https://img.shields.io/badge/version-2.1.1-brightgreen?style=flat-square)]()
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)]()
+
+---
 
 ## 소개
-Tab Timer는 웹 브라우저에서 각 사이트별 사용 시간을 추적하고 관리할 수 있는 Chrome 확장 프로그램입니다. 생산성 향상과 디지털 웰빙을 위해 웹사이트 사용 시간을 모니터링하고 제한할 수 있습니다.
 
-## 🚀 프로젝트 개요
+Receipt는 브라우저 사용 내역을 **영수증**으로 보여주는 Chrome 확장 프로그램입니다.  
+방문한 모든 사이트와 체류 시간을 자동으로 기록하고, 집중 모드로 방해 사이트를 차단하며, 결과를 이미지로 공유할 수 있습니다.
 
-Tab Timer는 사용자의 웹 사용 습관을 개선하기 위해 개발된 Chrome 확장 프로그램 기반 시간 추적 시스템입니다.
+---
 
-### ✨ 주요 기능
+## ✨ 기능
 
-#### 기본 기능
-- ⏱️ **자동 시간 추적**: 웹사이트 방문 시 자동으로 체류 시간 기록
-- 📊 **실시간 통계**: 도메인별, 세션별 상세 사용 시간 확인
-- ⏰ **시간 제한 알림**: 설정한 시간 초과 시 알림 표시
-- 🌓 **다크 모드**: 눈의 피로를 줄이는 다크 테마 지원
+### 📊 일간 사용 시간 추적
+- 사이트별 체류 시간 자동 기록
+- SNS / 엔터테인먼트 / 업무 / 커뮤니티 카테고리 자동 분류
+- 툴바 배지에 오늘의 총 사용 시간 실시간 표시
+- 유휴 상태 감지 — 자리 비운 시간은 측정하지 않음
 
-#### 고급 기능
-- 📈 **세션 기반 추적**: 각 방문을 개별 세션으로 기록
-- 💡 **스마트 인사이트**: 생산성 점수 및 사용 패턴 분석
-- 📱 **반응형 대시보드**: 웹 기반 상세 통계 대시보드
-- 💾 **데이터 내보내기**: JSON 형식으로 전체 데이터 백업
-- 🏥 **웰빙 추적**: 연속 사용 시간 및 생산성 모니터링
+### 🎯 집중 모드
+- 클릭 한 번으로 60개+ 방해 사이트 즉시 차단
+- 활성화 시 이미 열려 있는 탭도 즉시 차단
+- 종료 시 모든 탭 자동 해제
+- 차단 목록 커스텀 가능 (카테고리별 토글 + 직접 추가)
 
-### 🛠️ 기술 스택
+### 🔥 스트릭 & 인사이트
+- 목표 달성 시 연속 기록(스트릭) 추적
+- 오늘 가장 먼저 연 사이트 기록
+- 빠른 탭 전환 횟수로 딴짓 횟수 측정
+- 어제 대비 사용 시간 증감 표시
+- 주간 자동 리포트 (매주 월요일 알림)
 
-- **Frontend**: Vanilla JavaScript, HTML5, CSS3
-- **UI Framework**: Material Design Icons
-- **스토리지**: Chrome Storage API
-- **빌드**: npm scripts
-- **테스트**: Jest + Puppeteer
+### 🔗 영수증 공유
+- 오늘의 사용 내역을 영수증 이미지로 생성
+- 소셜 미디어에 바로 공유 가능
 
-## 📦 설치 방법
+### ⏰ 시간 제한
+- 사이트별 일일 제한 시간 설정
+- 초과 시 차단 화면 표시 + 15분 연장 옵션
 
-### Chrome 웹 스토어 (준비 중)
-곧 Chrome 웹 스토어에서 설치할 수 있습니다.
+---
 
-### 개발자 모드 설치
-1. 이 저장소를 클론합니다:
-   ```bash
-   git clone https://github.com/octxxiii/tab-timer.git
-   cd tab-timer
-   ```
+## 📦 설치
 
-2. Chrome 브라우저에서 `chrome://extensions/` 접속
+### Chrome 웹 스토어
+[Chrome 웹 스토어에서 설치](https://chromewebstore.google.com/detail/receipt/bkpigoodgcpamgbeci...)
 
-3. 우측 상단의 "개발자 모드" 활성화
+### 개발자 모드
+```bash
+git clone https://github.com/octxxiii/Tab-Timer.git
+cd Tab-Timer
+npm install
+npm run build
+```
+`chrome://extensions/` → 개발자 모드 → `dist/` 폴더 로드
 
-4. "압축해제된 확장 프로그램을 로드합니다" 클릭
+---
 
-5. 프로젝트 폴더 선택
+## 🛠️ 개발
 
-## 🎯 사용 방법
+```bash
+npm install        # 의존성 설치
+npm run build      # dist/ 빌드
+```
 
-### 기본 사용법
-1. 브라우저 툴바의 Tab Timer 아이콘 클릭
-2. 오늘의 사용 시간과 통계 확인
-3. 필요시 시간 제한 설정
+### 스토어 에셋 생성
+```bash
+# 브라우저에서 열기
+scripts/generate-store-assets.html   # 스크린샷 · 프로모 이미지
+scripts/generate-icon.html           # 아이콘 (128/48/16px)
+```
 
-### 시간 제한 설정
-1. 팝업에서 "시간 제한 설정" 섹션 찾기
-2. 원하는 시간(분 단위) 입력
-3. "설정" 버튼 클릭
+### 프로젝트 구조
+```
+src/
+  background/background.js   # 서비스 워커 — 추적, 집중 모드, 알림
+  popup/popup.html            # 팝업 UI
+  popup/popup.js              # 팝업 로직 + 번역
+  content/blocker.js          # 차단 화면 content script
+public/
+  manifest.json
+  images/
+scripts/
+  build.js                    # 빌드 스크립트
+  generate-store-assets.html  # 스토어 이미지 생성기
+  generate-icon.html          # 아이콘 생성기
+```
 
-### 대시보드 접속
-1. 팝업에서 "대시보드" 버튼 클릭
-2. 또는 `https://octxxiii.github.io/tab-timer?extensionId=YOUR_EXTENSION_ID` 직접 접속
+---
 
-## 📊 주요 화면
+## 🔒 권한
 
-### 팝업 인터페이스
-- **통계 카드**: 오늘의 총 사용 시간, 세션 수, 방문 사이트 수
-- **도메인 리스트**: 사이트별 사용 시간과 비율
-- **빠른 액션**: 대시보드, 인사이트, 데이터 내보내기
+| 권한 | 이유 |
+|------|------|
+| `tabs` | 현재 탭 URL 및 전환 추적 |
+| `storage` | 사용 통계 로컬 저장 |
+| `notifications` | 시간 제한 · 집중 모드 종료 알림 |
+| `idle` | 유휴 상태 감지 — 자리 비운 시간 제외 |
+| `alarms` | 집중 모드 자동 종료 · 주간 리포트 예약 |
+| `activeTab` | 현재 탭 정보 접근 |
 
-### 웹 대시보드
-- **일간 차트**: 최근 7일간 사용 시간 추이
-- **도메인 분포**: 사이트별 시간 분포 도넛 차트
-- **목표 설정**: 도메인별 시간 제한 관리
+모든 데이터는 기기 내에만 저장됩니다. 서버 전송 없음.
 
-## 🔄 업데이트 내역
+---
+
+## 📋 업데이트 내역
+
+### v2.1.1 (2025.05)
+- 집중 모드: 열린 탭 즉시 차단/해제, 차단 목록 커스텀
+- 스트릭, 딴짓 감지, 첫 방문 사이트, 어제 대비 델타, 주간 리포트
+- 툴바 배지 실시간 사용 시간 표시
+- 한/영 완전 i18n 지원
+- 포모도로 기능 제거 (실용성 낮음)
+- Chrome Web Store 권한 최소화 (`host_permissions` 제거)
+- 스토어 에셋 생성기 추가
 
 ### v2.0.0 (2024.01)
-- 🎨 UI/UX 전면 개편
-- 🌓 다크 모드 추가
-- 📊 세션 기반 추적 시스템 도입
-- 💡 스마트 인사이트 기능 추가
-- 🚀 성능 최적화 (디바운싱, 자동 정리)
-- 🏥 웰빙 추적 기능 추가
+- Receipt로 리브랜딩
+- 영수증 스타일 UI 전면 개편
+- 영수증 이미지 공유 기능
 
 ### v1.0.0 (2024.01)
-- 🎉 초기 버전 출시
-- ⏱️ 기본 시간 추적 기능
-- 📊 간단한 통계 표시
+- 초기 출시 — 기본 시간 추적
 
-## 🗺️ 로드맵
-
-### 2025 Q1
-- [ ] Chrome 웹 스토어 출시
-- [ ] Firefox 확장 프로그램 지원
-- [ ] 팀/그룹 기능 추가
-
-### 2025 Q2
-- [ ] React 기반 대시보드 마이그레이션
-- [ ] Firebase 백엔드 연동
-- [ ] 실시간 동기화 기능
-
-### 2025 Q3
-- [ ] Flutter 모바일 앱 개발
-- [ ] AI 기반 습관 개선 추천
-- [ ] 프리미엄 구독 시스템
-
-## 🤝 기여하기
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+---
 
 ## 📝 라이센스
 
-이 프로젝트는 MIT 라이센스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
-
-## 👥 팀
-
-- **개발**: [@octxxiii](https://github.com/octxxiii)
-- **디자인**: Tab Timer Design Team
-- **기여자**: [Contributors](https://github.com/octxxiii/tab-timer/contributors)
-
-## 📞 문의
-
-- **이슈**: [GitHub Issues](https://github.com/octxxiii/tab-timer/issues)
-- **이메일**: contact@tabtimer.app (준비 중)
-- **웹사이트**: [https://octxxiii.github.io/tab-timer](https://octxxiii.github.io/tab-timer)
+MIT — 자세한 내용은 [LICENSE](LICENSE) 파일 참조
 
 ---
 
 <p align="center">
-  Made with ❤️ by Tab Timer Team
+  <a href="https://github.com/octxxiii/Tab-Timer">github.com/octxxiii/Tab-Timer</a>
 </p>

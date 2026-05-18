@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Receipt – Store Asset Generator</title>
+<style>
+  body { background:#1a1a1a; font-family:'Space Mono',monospace; padding:24px; color:#fff; }
+  h2 { font-size:13px; letter-spacing:2px; color:#555; margin:32px 0 8px; }
+  .row { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:8px; }
+  canvas { border:1px solid #333; border-radius:4px; cursor:pointer; }
+  canvas:hover { border-color:#666; }
+  .hint { font-size:11px; color:#444; margin-top:4px; }
+  button { background:#2196f3; color:#fff; border:none; padding:10px 20px; border-radius:4px;
+           font-family:'Space Mono',monospace; font-size:11px; cursor:pointer; margin:4px; }
+  button:hover { background:#1976d2; }
+  #controls { position:sticky; top:0; background:#1a1a1a; padding:12px 0; border-bottom:1px solid #333; z-index:10; margin-bottom:24px; }
+  .tag { font-size:10px; color:#2196f3; letter-spacing:1px; }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="controls">
+  <span class="tag">RECEIPT STORE ASSET GENERATOR</span><br><br>
+  <button onclick="downloadAll()">⬇ 전체 다운로드</button>
+  <button onclick="downloadCanvas('screenshot1')">스크린샷 1</button>
+  <button onclick="downloadCanvas('screenshot2')">스크린샷 2</button>
+  <button onclick="downloadCanvas('screenshot3')">스크린샷 3</button>
+  <button onclick="downloadCanvas('small_promo')">소형 타일 440×280</button>
+  <button onclick="downloadCanvas('marquee')">마퀴 배너 1400×560</button>
+</div>
+
+<h2>SCREENSHOTS — 1280×800</h2>
+<div class="row">
+  <div><canvas id="screenshot1" width="1280" height="800"></canvas><div class="hint">클릭해도 다운로드</div></div>
+</div>
+<div class="row">
+  <div><canvas id="screenshot2" width="1280" height="800"></canvas></div>
+</div>
+<div class="row">
+  <div><canvas id="screenshot3" width="1280" height="800"></canvas></div>
+</div>
+
+<h2>SMALL PROMO TILE — 440×280</h2>
+<div class="row">
+  <div><canvas id="small_promo" width="440" height="280"></canvas></div>
+</div>
+
+<h2>MARQUEE BANNER — 1400×560</h2>
+<div class="row">
+  <div><canvas id="marquee" width="1400" height="560" style="width:700px;height:280px"></canvas></div>
+</div>
+
+<script>
+// ── palette ──────────────────────────────────────────────────────────────
+const C = {
+  bg: '#0d0d0d',
+  panel: '#111111',
+  border: '#2a2a2a',
+  borderDash: '#333333',
+  text: '#ffffff',
+  textMuted: '#888888',
+  textDim: '#444444',
+  accent: '#6c63ff',
+  blue: '#2196f3',
+  red: '#ef4444',
+  green: '#22c55e',
+  yellow: '#f59e0b',
+};
+
+// ── helpers ───────────────────────────────────────────────────────────────
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function dashedLine(ctx, x1, y1, x2, y2, color='#2a2a2a') {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function solidLine(ctx, x1, y1, x2, y2, color='#2a2a2a') {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ── draw the Receipt popup ────────────────────────────────────────────────
+function drawPopup(ctx, px, py, scale=1) {
+  const W = 360 * scale, H = 560 * scale;
+  const s = n => n * scale;
+
+  // popup shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.8)';
+  ctx.shadowBlur = s(40);
+  ctx.shadowOffsetY = s(8);
+  roundRect(ctx, px, py, W, H, s(12));
+  ctx.fillStyle = C.panel;
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+
+  // popup border
+  roundRect(ctx, px, py, W, H, s(12));
+  ctx.strokeStyle = C.border;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // ── HEADER ──
+  const hx = px + s(16), hw = W - s(32);
+  ctx.fillStyle = C.textDim;
+  ctx.font = `${s(9)}px 'Space Mono', monospace`;
+  ctx.letterSpacing = `${s(2)}px`;
+  ctx.fillText('🧾 RECEIPT', px + W/2 - s(28), py + s(28));
+
+  // nav tabs
+  const tabs = ['Today','Stats','Sites','Settings'];
+  tabs.forEach((tab, i) => {
+    const tx = px + s(16) + i * (W - s(32)) / 4;
+    const tw = (W - s(32)) / 4;
+    const active = i === 0;
+    if (active) {
+      roundRect(ctx, tx, py + s(36), tw, s(24), s(4));
+      ctx.fillStyle = '#1e1e1e';
+      ctx.fill();
+    }
+    ctx.fillStyle = active ? C.text : C.textDim;
+    ctx.font = `${s(9)}px 'Space Mono', monospace`;
+    ctx.letterSpacing = '0px';
+    ctx.textAlign = 'center';
+    ctx.fillText(tab, tx + tw/2, py + s(52));
+  });
+  ctx.textAlign = 'left';
+
+  // divider
+  dashedLine(ctx, px + s(12), py + s(66), px + W - s(12), py + s(66));
+
+  // ── TODAY VIEW ──
+  let cy = py + s(80);
+
+  // Date / time
+  ctx.fillStyle = C.textDim;
+  ctx.font = `${s(9)}px 'Space Mono', monospace`;
+  ctx.fillText('2025. 05. 18.  09:41', px + s(16), cy);
+  cy += s(20);
+
+  // Site rows
+  const sites = [
+    { name: 'youtube.com',     mins: 89, color: C.red },
+    { name: 'instagram.com',   mins: 54, color: C.accent },
+    { name: 'notion.so',       mins: 38, color: C.blue },
+    { name: 'github.com',      mins: 22, color: C.green },
+    { name: 'twitter.com',     mins: 15, color: C.yellow },
+  ];
+  const maxMins = 89;
+  sites.forEach(site => {
+    // favicon placeholder
+    roundRect(ctx, px + s(16), cy - s(9), s(14), s(14), s(3));
+    ctx.fillStyle = site.color + '33';
+    ctx.fill();
+    ctx.fillStyle = site.color;
+    ctx.font = `bold ${s(7)}px 'Space Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(site.name[0].toUpperCase(), px + s(23), cy + s(1));
+    ctx.textAlign = 'left';
+
+    // domain
+    ctx.fillStyle = C.text;
+    ctx.font = `${s(10)}px 'Space Mono', monospace`;
+    ctx.fillText(site.name, px + s(36), cy);
+
+    // bar
+    const barW = (W - s(130));
+    const filled = barW * (site.mins / maxMins);
+    roundRect(ctx, px + s(36), cy + s(4), barW, s(2), s(1));
+    ctx.fillStyle = C.border;
+    ctx.fill();
+    roundRect(ctx, px + s(36), cy + s(4), filled, s(2), s(1));
+    ctx.fillStyle = site.color;
+    ctx.fill();
+
+    // time
+    ctx.fillStyle = C.textMuted;
+    ctx.font = `${s(9)}px 'Space Mono', monospace`;
+    ctx.textAlign = 'right';
+    ctx.fillText(`${site.mins}m`, px + W - s(16), cy);
+    ctx.textAlign = 'left';
+
+    cy += s(22);
+  });
+
+  // divider
+  dashedLine(ctx, px + s(12), cy + s(2), px + W - s(12), cy + s(2));
+  cy += s(14);
+
+  // TOTAL
+  ctx.fillStyle = C.textMuted;
+  ctx.font = `bold ${s(9)}px 'Space Mono', monospace`;
+  ctx.letterSpacing = `${s(1)}px`;
+  ctx.fillText('TOTAL', px + s(16), cy);
+  ctx.fillStyle = C.text;
+  ctx.font = `bold ${s(16)}px 'Space Mono', monospace`;
+  ctx.textAlign = 'right';
+  ctx.fillText('3h 28m', px + W - s(16), cy);
+  ctx.textAlign = 'left';
+  ctx.letterSpacing = '0px';
+  cy += s(10);
+
+  // streak + context
+  ctx.fillStyle = C.yellow;
+  ctx.font = `${s(9)}px 'Space Mono', monospace`;
+  ctx.fillText('🔥 7 day streak', px + s(16), cy + s(8));
+
+  // tagline
+  ctx.fillStyle = C.textDim;
+  ctx.font = `${s(8)}px 'Space Mono', monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('♪ 앨범 한 장 동째로 들을 수 있었어요', px + W/2, cy + s(22));
+  ctx.textAlign = 'left';
+  cy += s(32);
+
+  // divider
+  dashedLine(ctx, px + s(12), cy, px + W - s(12), cy);
+  cy += s(14);
+
+  // share button
+  roundRect(ctx, px + s(16), cy, W - s(32), s(32), s(6));
+  ctx.fillStyle = C.accent;
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${s(9)}px 'Space Mono', monospace`;
+  ctx.letterSpacing = `${s(1)}px`;
+  ctx.textAlign = 'center';
+  ctx.fillText('이 영수증 공유하기', px + W/2, cy + s(20));
+  ctx.textAlign = 'left';
+  ctx.letterSpacing = '0px';
+  cy += s(42);
+
+  // category bar
+  const cats = [
+    { pct: 0.35, color: C.red },
+    { pct: 0.25, color: C.accent },
+    { pct: 0.20, color: C.blue },
+    { pct: 0.12, color: C.green },
+    { pct: 0.08, color: C.yellow },
+  ];
+  let bx = px + s(16);
+  cats.forEach(c => {
+    const bw = (W - s(32)) * c.pct - s(1);
+    roundRect(ctx, bx, cy, bw, s(5), s(2));
+    ctx.fillStyle = c.color;
+    ctx.fill();
+    bx += bw + s(1);
+  });
+  cy += s(15);
+
+  // focus mode button
+  roundRect(ctx, px + s(16), cy, W - s(32), s(28), s(6));
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fill();
+  ctx.strokeStyle = C.accent;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = C.accent;
+  ctx.font = `bold ${s(9)}px 'Space Mono', monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('🎯  1시간 집중 모드', px + W/2, cy + s(18));
+  ctx.textAlign = 'left';
+
+  // THANK YOU footer
+  ctx.fillStyle = C.textDim;
+  ctx.font = `${s(8)}px 'Space Mono', monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('• THANK YOU FOR YOUR TIME •', px + W/2, py + H - s(12));
+  ctx.textAlign = 'left';
+}
+
+// ── SCREENSHOT 1 — "Your daily browser receipt" ───────────────────────────
+function drawScreenshot1() {
+  const c = document.getElementById('screenshot1');
+  const ctx = c.getContext('2d');
+  const W = 1280, H = 800;
+
+  // dark gradient bg
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#060606');
+  grad.addColorStop(1, '#0f0f0f');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // subtle grid
+  ctx.strokeStyle = '#151515';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // left copy
+  const lx = 120;
+  ctx.fillStyle = C.textDim;
+  ctx.font = "bold 11px 'Space Mono', monospace";
+  ctx.letterSpacing = '4px';
+  ctx.fillText('RECEIPT', lx, 200);
+
+  ctx.fillStyle = C.text;
+  ctx.font = "bold 52px 'Space Mono', monospace";
+  ctx.letterSpacing = '-1px';
+  const line1 = 'Your daily';
+  const line2 = 'browser';
+  const line3 = 'receipt.';
+  ctx.fillText(line1, lx, 275);
+  ctx.fillText(line2, lx, 335);
+  ctx.fillStyle = C.accent;
+  ctx.fillText(line3, lx, 395);
+
+  ctx.fillStyle = C.textMuted;
+  ctx.font = "14px 'Space Mono', monospace";
+  ctx.letterSpacing = '0px';
+  ctx.fillText('See exactly where your time goes.', lx, 445);
+  ctx.fillText('Share the truth.', lx, 468);
+
+  // accent line
+  ctx.fillStyle = C.accent;
+  ctx.fillRect(lx, 490, 60, 2);
+
+  // badge indicators
+  const badges = ['🔥 Streak', '⚡ Focus Mode', '📊 Stats', '🔗 Share'];
+  badges.forEach((b, i) => {
+    const bx2 = lx + i * 140;
+    roundRect(ctx, bx2, 510, 130, 28, 4);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fill();
+    ctx.strokeStyle = C.border;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = C.textMuted;
+    ctx.font = "10px 'Space Mono', monospace";
+    ctx.fillText(b, bx2 + 10, 529);
+  });
+
+  // popup
+  drawPopup(ctx, 680, 80, 1.65);
+
+  // bottom tag
+  ctx.fillStyle = C.textDim;
+  ctx.font = "10px 'Space Mono', monospace";
+  ctx.letterSpacing = '2px';
+  ctx.textAlign = 'center';
+  ctx.fillText('FREE · CHROME EXTENSION · PRIVACY FIRST', W/2, H - 24);
+  ctx.textAlign = 'left';
+}
+
+// ── SCREENSHOT 2 — Focus Mode ────────────────────────────────────────────
+function drawScreenshot2() {
+  const c = document.getElementById('screenshot2');
+  const ctx = c.getContext('2d');
+  const W = 1280, H = 800;
+
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#07050f');
+  grad.addColorStop(1, '#0d0b1a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // accent glow blob
+  const grd = ctx.createRadialGradient(W*0.7, H*0.4, 0, W*0.7, H*0.4, 400);
+  grd.addColorStop(0, 'rgba(108,99,255,0.12)');
+  grd.addColorStop(1, 'transparent');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W, H);
+
+  // left copy
+  const lx = 120;
+  ctx.fillStyle = C.accent;
+  ctx.font = "bold 11px 'Space Mono', monospace";
+  ctx.letterSpacing = '4px';
+  ctx.fillText('🎯 FOCUS MODE', lx, 200);
+
+  ctx.fillStyle = C.text;
+  ctx.font = "bold 52px 'Space Mono', monospace";
+  ctx.letterSpacing = '-1px';
+  ctx.fillText('Block the', lx, 275);
+  ctx.fillText('noise.', lx, 335);
+  ctx.fillStyle = C.accent;
+  ctx.fillText('Stay in flow.', lx, 395);
+
+  ctx.fillStyle = C.textMuted;
+  ctx.font = "14px 'Space Mono', monospace";
+  ctx.letterSpacing = '0px';
+  ctx.fillText('One click blocks 60+ distraction sites.', lx, 445);
+  ctx.fillText('Custom block list. Auto-unblock.', lx, 468);
+
+  // site pills being blocked
+  const blocked = ['youtube.com','instagram.com','twitter.com','reddit.com','tiktok.com','facebook.com'];
+  blocked.forEach((s, i) => {
+    const bx2 = lx + (i % 3) * 185;
+    const by2 = 498 + Math.floor(i / 3) * 36;
+    roundRect(ctx, bx2, by2, 175, 28, 4);
+    ctx.fillStyle = '#1a0808';
+    ctx.fill();
+    ctx.strokeStyle = '#3a1515';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = C.red;
+    ctx.font = "10px 'Space Mono', monospace";
+    ctx.fillText(`🚫 ${s}`, bx2 + 10, by2 + 18);
+  });
+
+  // blocker screen mockup
+  const bpx = 700, bpy = 100;
+  const bW = 500, bH = 600;
+  roundRect(ctx, bpx, bpy, bW, bH, 12);
+  ctx.fillStyle = 'rgba(0,0,0,0.96)';
+  ctx.fill();
+  ctx.strokeStyle = '#222';
+  ctx.stroke();
+
+  // blocker inner card
+  const cx2 = bpx + 70, cy2 = bpy + 120, cW = 360, cH = 280;
+  roundRect(ctx, cx2, cy2, cW, cH, 4);
+  ctx.fillStyle = '#111';
+  ctx.fill();
+  ctx.strokeStyle = '#333';
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#555';
+  ctx.font = "bold 10px 'Space Mono', monospace";
+  ctx.letterSpacing = '3px';
+  ctx.textAlign = 'center';
+  ctx.fillText('🧾 RECEIPT', cx2 + cW/2, cy2 + 32);
+
+  ctx.fillStyle = C.text;
+  ctx.font = "bold 20px 'Space Mono', monospace";
+  ctx.letterSpacing = '0px';
+  ctx.fillText('🎯 FOCUS MODE', cx2 + cW/2, cy2 + 75);
+
+  dashedLine(ctx, cx2 + 20, cy2 + 90, cx2 + cW - 20, cy2 + 90, '#333');
+
+  ctx.fillStyle = '#ccc';
+  ctx.font = "12px 'Space Mono', monospace";
+  ctx.fillText('youtube.com is blocked', cx2 + cW/2, cy2 + 120);
+
+  ctx.fillStyle = '#555';
+  ctx.font = "10px 'Space Mono', monospace";
+  ctx.fillText("This isn't the time for distractions", cx2 + cW/2, cy2 + 145);
+
+  dashedLine(ctx, cx2 + 20, cy2 + 165, cx2 + cW - 20, cy2 + 165, '#333');
+
+  roundRect(ctx, cx2 + 20, cy2 + 180, cW - 40, 40, 3);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fill();
+  ctx.strokeStyle = '#333';
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#555';
+  ctx.font = "10px 'Space Mono', monospace";
+  ctx.fillText('← Go back', cx2 + cW/2, cy2 + 205);
+  ctx.textAlign = 'left';
+  ctx.letterSpacing = '0px';
+
+  ctx.fillStyle = C.textDim;
+  ctx.font = "10px 'Space Mono', monospace";
+  ctx.letterSpacing = '2px';
+  ctx.textAlign = 'center';
+  ctx.fillText('FREE · CHROME EXTENSION · PRIVACY FIRST', W/2, H - 24);
+  ctx.textAlign = 'left';
+}
+
+// ── SCREENSHOT 3 — Share Receipt ─────────────────────────────────────────
+function drawScreenshot3() {
+  const c = document.getElementById('screenshot3');
+  const ctx = c.getContext('2d');
+  const W = 1280, H = 800;
+
+  ctx.fillStyle = '#080808';
+  ctx.fillRect(0, 0, W, H);
+
+  // left copy
+  const lx = 120;
+  ctx.fillStyle = C.green;
+  ctx.font = "bold 11px 'Space Mono', monospace";
+  ctx.letterSpacing = '4px';
+  ctx.fillText('SHARE YOUR RECEIPT', lx, 200);
+
+  ctx.fillStyle = C.text;
+  ctx.font = "bold 52px 'Space Mono', monospace";
+  ctx.letterSpacing = '-1px';
+  ctx.fillText('Confess your', lx, 275);
+  ctx.fillText('screen time.', lx, 335);
+  ctx.fillStyle = C.yellow;
+  ctx.fillText('Own it.', lx, 395);
+
+  ctx.fillStyle = C.textMuted;
+  ctx.font = "14px 'Space Mono', monospace";
+  ctx.letterSpacing = '0px';
+  ctx.fillText('Generate a shareable receipt image.', lx, 445);
+  ctx.fillText('Works on any social media.', lx, 468);
+
+  // receipt image mockup (white thermal paper look)
+  const rx = 660, ry = 60, rW = 340, rH = 660;
+  ctx.shadowColor = 'rgba(255,255,255,0.08)';
+  ctx.shadowBlur = 30;
+  roundRect(ctx, rx, ry, rW, rH, 4);
+  ctx.fillStyle = '#f8f8f6';
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // receipt content
+  let rcy = ry + 40;
+  ctx.fillStyle = '#111';
+  ctx.font = "bold 11px 'Space Mono', monospace";
+  ctx.letterSpacing = '3px';
+  ctx.textAlign = 'center';
+  ctx.fillText('RECEIPT', rx + rW/2, rcy);
+  rcy += 16;
+  ctx.font = "10px 'Space Mono', monospace";
+  ctx.letterSpacing = '1px';
+  ctx.fillStyle = '#888';
+  ctx.fillText('YOUR DAILY BROWSER RECEIPT', rx + rW/2, rcy);
+  rcy += 28;
+
+  // dashed line
+  ctx.strokeStyle = '#ccc';
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(rx+20,rcy); ctx.lineTo(rx+rW-20,rcy); ctx.stroke();
+  ctx.setLineDash([]);
+  rcy += 20;
+
+  ctx.fillStyle = '#333';
+  ctx.font = "10px 'Space Mono', monospace";
+  ctx.letterSpacing = '0px';
+  ctx.fillText('2025.05.18  SUN  09:41', rx + rW/2, rcy);
+  rcy += 30;
+
+  const rsites = [
+    ['youtube.com',    '1h 29m'],
+    ['instagram.com',  '54m'],
+    ['notion.so',      '38m'],
+    ['github.com',     '22m'],
+    ['twitter.com',    '15m'],
+    ['others',         '10m'],
+  ];
+  rsites.forEach(([name, time]) => {
+    ctx.fillStyle = '#333';
+    ctx.font = "11px 'Space Mono', monospace";
+    ctx.textAlign = 'left';
+    ctx.fillText(name, rx + 24, rcy);
+    ctx.textAlign = 'right';
+    ctx.fillText(time, rx + rW - 24, rcy);
+    rcy += 26;
+  });
+
+  ctx.strokeStyle = '#ccc';
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(rx+20,rcy); ctx.lineTo(rx+rW-20,rcy); ctx.stroke();
+  ctx.setLineDash([]);
+  rcy += 20;
+
+  ctx.fillStyle = '#111';
+  ctx.font = "bold 13px 'Space Mono', monospace";
+  ctx.textAlign = 'left';
+  ctx.fillText('TOTAL', rx + 24, rcy);
+  ctx.textAlign = 'right';
+  ctx.font = "bold 20px 'Space Mono', monospace";
+  ctx.fillText('3h 48m', rx + rW - 24, rcy);
+  rcy += 32;
+
+  ctx.fillStyle = '#555';
+  ctx.font = "italic 10px 'Space Mono', monospace";
+  ctx.textAlign = 'center';
+  ctx.fillText('"You could\'ve learned a language."', rx + rW/2, rcy);
+  rcy += 30;
+
+  ctx.strokeStyle = '#ccc';
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(rx+20,rcy); ctx.lineTo(rx+rW-20,rcy); ctx.stroke();
+  ctx.setLineDash([]);
+  rcy += 20;
+
+  ctx.fillStyle = '#888';
+  ctx.font = "9px 'Space Mono', monospace";
+  ctx.letterSpacing = '1px';
+  ctx.fillText('🔥 7 DAY STREAK', rx + rW/2, rcy);
+  rcy += 18;
+  ctx.fillText('REF #A7F3-2025-0518', rx + rW/2, rcy);
+  rcy += 28;
+
+  ctx.fillStyle = '#aaa';
+  ctx.font = "9px 'Space Mono', monospace";
+  ctx.letterSpacing = '2px';
+  ctx.fillText('• THANK YOU FOR YOUR TIME •', rx + rW/2, rcy);
+
+  ctx.textAlign = 'left';
+  ctx.letterSpacing = '0px';
+
+  // right popup (partial, soft faded)
+  ctx.globalAlpha = 0.4;
+  drawPopup(ctx, 1030, 100, 1.1);
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = C.textDim;
+  ctx.font = "10px 'Space Mono', monospace";
+  ctx.letterSpacing = '2px';
+  ctx.textAlign = 'center';
+  ctx.fillText('FREE · CHROME EXTENSION · PRIVACY FIRST', W/2, H - 24);
+  ctx.textAlign = 'left';
+}
+
+// ── SMALL PROMO TILE 440×280 ─────────────────────────────────────────────
+function drawSmallPromo() {
+  const c = document.getElementById('small_promo');
+  const ctx = c.getContext('2d');
+  const W = 440, H = 280;
+
+  const grad = ctx.createLinearGradient(0,0,W,H);
+  grad.addColorStop(0,'#0d0d0d');
+  grad.addColorStop(1,'#0a0a16');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,W,H);
+
+  const grd = ctx.createRadialGradient(W*0.8, H*0.2, 0, W*0.8, H*0.2, 200);
+  grd.addColorStop(0,'rgba(108,99,255,0.15)');
+  grd.addColorStop(1,'transparent');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle = C.textDim;
+  ctx.font = "bold 9px 'Space Mono', monospace";
+  ctx.letterSpacing = '3px';
+  ctx.fillText('🧾 RECEIPT', 32, 50);
+
+  ctx.fillStyle = C.text;
+  ctx.font = "bold 34px 'Space Mono', monospace";
+  ctx.letterSpacing = '-1px';
+  ctx.fillText('Your daily', 32, 105);
+  ctx.fillStyle = C.accent;
+  ctx.fillText('receipt.', 32, 148);
+
+  ctx.fillStyle = C.textMuted;
+  ctx.font = "11px 'Space Mono', monospace";
+  ctx.letterSpacing = '0px';
+  ctx.fillText('Track · Focus · Share', 32, 178);
+
+  ctx.fillStyle = C.accent;
+  ctx.fillRect(32, 196, 40, 2);
+
+  roundRect(ctx, 32, 214, 140, 30, 4);
+  ctx.fillStyle = C.accent;
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = "bold 9px 'Space Mono', monospace";
+  ctx.letterSpacing = '1px';
+  ctx.textAlign = 'center';
+  ctx.fillText('ADD TO CHROME', 102, 233);
+  ctx.textAlign = 'left';
+  ctx.letterSpacing = '0px';
+
+  // mini popup preview
+  ctx.globalAlpha = 0.85;
+  drawPopup(ctx, 255, 20, 0.52);
+  ctx.globalAlpha = 1;
+}
+
+// ── MARQUEE BANNER 1400×560 ──────────────────────────────────────────────
+function drawMarquee() {
+  const c = document.getElementById('marquee');
+  const ctx = c.getContext('2d');
+  const W = 1400, H = 560;
+
+  ctx.fillStyle = '#080808';
+  ctx.fillRect(0,0,W,H);
+
+  // subtle horizontal scanlines
+  for (let y = 0; y < H; y += 3) {
+    ctx.fillStyle = 'rgba(255,255,255,0.012)';
+    ctx.fillRect(0, y, W, 1);
+  }
+
+  // left glow
+  const g1 = ctx.createRadialGradient(350, H/2, 0, 350, H/2, 350);
+  g1.addColorStop(0,'rgba(108,99,255,0.18)');
+  g1.addColorStop(1,'transparent');
+  ctx.fillStyle = g1;
+  ctx.fillRect(0,0,W,H);
+
+  // right glow
+  const g2 = ctx.createRadialGradient(1100, H/2, 0, 1100, H/2, 300);
+  g2.addColorStop(0,'rgba(33,150,243,0.10)');
+  g2.addColorStop(1,'transparent');
+  ctx.fillStyle = g2;
+  ctx.fillRect(0,0,W,H);
+
+  // brand
+  ctx.fillStyle = C.textDim;
+  ctx.font = "bold 11px 'Space Mono', monospace";
+  ctx.letterSpacing = '5px';
+  ctx.fillText('🧾 RECEIPT FOR CHROME', 100, 140);
+
+  // headline
+  ctx.fillStyle = C.text;
+  ctx.font = "bold 72px 'Space Mono', monospace";
+  ctx.letterSpacing = '-2px';
+  ctx.fillText('Know where', 100, 235);
+  ctx.fillStyle = C.accent;
+  ctx.fillText('your time goes.', 100, 315);
+
+  // sub
+  ctx.fillStyle = C.textMuted;
+  ctx.font = "16px 'Space Mono', monospace";
+  ctx.letterSpacing = '0px';
+  ctx.fillText('Track · Block distractions · Share your receipt', 100, 370);
+
+  // pills
+  const features = ['Free','Open Source','No Sign-up','Privacy First'];
+  let px2 = 100;
+  features.forEach(f => {
+    const fw = ctx.measureText(f).width + 28;
+    roundRect(ctx, px2, 400, fw, 28, 14);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fill();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = C.textMuted;
+    ctx.font = "11px 'Space Mono', monospace";
+    ctx.textAlign = 'center';
+    ctx.fillText(f, px2 + fw/2, 419);
+    ctx.textAlign = 'left';
+    px2 += fw + 10;
+  });
+
+  // popup (right side)
+  ctx.globalAlpha = 0.92;
+  drawPopup(ctx, 820, 50, 2.0);
+  ctx.globalAlpha = 1;
+
+  // bottom
+  ctx.fillStyle = C.textDim;
+  ctx.font = "10px 'Space Mono', monospace";
+  ctx.letterSpacing = '2px';
+  ctx.textAlign = 'center';
+  ctx.fillText('AVAILABLE ON CHROME WEB STORE  ·  FREE FOREVER', W/2, H - 20);
+  ctx.textAlign = 'left';
+}
+
+// ── render all ───────────────────────────────────────────────────────────
+function renderAll() {
+  drawScreenshot1();
+  drawScreenshot2();
+  drawScreenshot3();
+  drawSmallPromo();
+  drawMarquee();
+}
+
+function downloadCanvas(id) {
+  const c = document.getElementById(id);
+  const a = document.createElement('a');
+  a.download = `receipt_${id}.png`;
+  a.href = c.toDataURL('image/png');
+  a.click();
+}
+
+function downloadAll() {
+  ['screenshot1','screenshot2','screenshot3','small_promo','marquee'].forEach(id => downloadCanvas(id));
+}
+
+// click to download
+['screenshot1','screenshot2','screenshot3','small_promo','marquee'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => downloadCanvas(id));
+});
+
+window.addEventListener('load', renderAll);
+</script>
+</body>
+</html>

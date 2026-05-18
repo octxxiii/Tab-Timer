@@ -43,6 +43,14 @@ if (fs.existsSync(popupJs)) {
   console.log('✓ Copied popup.js');
 }
 
+// Copy content scripts
+const contentDir = path.join(srcDir, 'content');
+const blockerSrc = path.join(contentDir, 'blocker.js');
+if (fs.existsSync(blockerSrc)) {
+  fs.copyFileSync(blockerSrc, path.join(distDir, 'blocker.js'));
+  console.log('✓ Copied blocker.js');
+}
+
 // Copy public files (manifest, images)
 if (fs.existsSync(publicDir)) {
   // Copy manifest.json

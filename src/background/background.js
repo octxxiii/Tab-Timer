@@ -17,6 +17,17 @@ let lastNotificationTime = {};
 let updateInterval = null;
 let wellnessData = { consecutiveMinutes: 0 };
 let saveTimer = null;
+let lastBlockerTime = {};
+
+// ===== New Feature State =====
+let visitLog = {}; // domain -> last visit timestamp (in-memory)
+let lastDomainSwitchTime = null; // timestamp of last tab switch
+let lastDomainBeforeSwitch = null; // domain before last switch
+
+
+
+// Focus mode state
+let focusMode = { active: false, endTime: null, blockedDomains: [] };
 
 // ===== Date Helpers =====
 function getYYYYMMDD(date = new Date()) {
@@ -44,7 +55,9 @@ async function initializeStorage() {
     'goals',
     'dailyStats',
     'siteMetadata',
-    'sessions'
+    'sessions',
+    'firstSiteLog',
+    'streak'
   ]);
 
   const initialData = {};
@@ -54,6 +67,8 @@ async function initializeStorage() {
   if (!result.dailyStats) initialData.dailyStats = {};
   if (!result.siteMetadata) initialData.siteMetadata = {};
   if (!result.sessions) initialData.sessions = []; else sessions = result.sessions || [];
+  if (!result.firstSiteLog) initialData.firstSiteLog = {};
+  if (!result.streak) initialData.streak = { current: 0, best: 0, lastDate: null };
 
   // Ensure today's entry exists in dailyStats
   if (!result.dailyStats || !result.dailyStats[today]) {
@@ -66,6 +81,12 @@ async function initializeStorage() {
     await chrome.storage.local.set(initialData);
     console.log('Storage initialized:', initialData);
   }
+
+  // 시작 시 오늘 누적 시간으로 뱃지 초기화
+  refreshBadge();
+
+  // Schedule weekly report
+  scheduleWeeklyReport();
 
   // Get current active tab on startup
   try {
@@ -181,6 +202,40 @@ async function endSession(session) {
   checkTimeLimits(domain, dailyStats[dateKey].domains[domain]);
 }
 
+// ===== Badge =====
+function updateBadge(totalMinutes) {
+  let text = '';
+  if (totalMinutes >= 1) {
+    if (totalMinutes < 60) {
+      text = `${Math.floor(totalMinutes)}m`;
+    } else {
+      const h = Math.floor(totalMinutes / 60);
+      const m = Math.floor(totalMinutes % 60);
+      text = m > 0 ? `${h}h${m}` : `${h}h`;
+      if (text.length > 4) text = `${h}h`;
+    }
+  }
+  chrome.action.setBadgeText({ text });
+  chrome.action.setBadgeBackgroundColor({ color: '#6c63ff' });
+  if (text) {
+    chrome.action.setTitle({ title: `Receipt — 오늘 ${text} 사용` });
+  }
+}
+
+async function refreshBadge() {
+  const today = getYYYYMMDD();
+  const { dailyStats = {} } = await chrome.storage.local.get(['dailyStats']);
+  const todayData = dailyStats[today];
+  if (!todayData) { updateBadge(0); return; }
+  let total = todayData.totalTime || Object.values(todayData.domains || {}).reduce((s, v) => s + v, 0);
+  // 현재 추적 중인 탭 실시간 시간 추가
+  if (currentTabInfo.domain && currentTabInfo.startTime) {
+    const elapsed = (Date.now() - currentTabInfo.startTime) / 60000;
+    if (elapsed > 0 && elapsed < 60) total += elapsed;
+  }
+  updateBadge(total);
+}
+
 // ===== Time Tracking =====
 async function updateActiveTabTime() {
   try {
@@ -228,6 +283,9 @@ async function updateActiveTabTime() {
     // totalTime은 모든 도메인 시간의 합으로 재계산
     const allDomainTimes = Object.values(dailyStats[today].domains || {});
     dailyStats[today].totalTime = allDomainTimes.reduce((sum, time) => sum + time, 0);
+
+    // 뱃지 업데이트 (실시간 현재 탭 시간 포함)
+    updateBadge(dailyStats[today].totalTime + minutesSpent);
 
     // Update total time
     tabTimes[currentTabInfo.domain] = (tabTimes[currentTabInfo.domain] || 0) + timeSpent;
@@ -345,13 +403,67 @@ function isTrackableDomain(domain) {
 
 // ===== Time Limit Management =====
 function checkTimeLimits(domain, dailyTotalMinutes) {
+  // Focus mode blocking
+  if (focusMode.active && focusMode.blockedDomains.includes(domain)) {
+    showBlockerOnTab(domain, dailyTotalMinutes, 0);
+  }
+
   if (goals[domain] && goals[domain].limit !== undefined) {
     const limitInMinutes = goals[domain].limit;
     if (dailyTotalMinutes > limitInMinutes) {
-      console.log(`[checkTimeLimits] Limit EXCEEDED for ${domain}. Current: ${Math.round(dailyTotalMinutes * 100) / 100}분, Limit: ${limitInMinutes}분`);
-      console.log(`[checkTimeLimits] 시간 추적은 계속됩니다. 제한은 알림 목적이며 시간 기록을 멈추지 않습니다.`);
       createNotification(domain, dailyTotalMinutes, limitInMinutes);
+      showBlockerOnTab(domain, dailyTotalMinutes, limitInMinutes);
     }
+  }
+}
+
+function showBlockerOnTab(domain, timeSpent, limit) {
+  if (!currentTabInfo.tabId) return;
+  const now = Date.now();
+  // 5분 쿨다운 (알림과 별개 타이머)
+  if (lastBlockerTime[domain] && (now - lastBlockerTime[domain]) < 5 * 60 * 1000) return;
+  lastBlockerTime[domain] = now;
+
+  chrome.storage.local.get(['language', 'notifications'], (result) => {
+    if (result.notifications === false) return;
+    chrome.tabs.sendMessage(currentTabInfo.tabId, {
+      action: 'showBlocker',
+      domain,
+      timeSpent,
+      limit,
+      language: result.language || 'ko'
+    }).catch(() => {
+      // content script 아직 로드 안 된 탭이면 무시
+    });
+  });
+}
+
+// 집중 모드 블로커 — content script sendMessage 사용 (host_permissions 불필요)
+async function blockAllTabs(domains, lang) {
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    if (!tab.url || !tab.url.startsWith('http')) continue;
+    try {
+      const tabDomain = new URL(tab.url).hostname.replace(/^www\./, '');
+      const isBlocked = domains.some(d => tabDomain.includes(d) || d.includes(tabDomain));
+      if (!isBlocked) continue;
+      chrome.tabs.sendMessage(tab.id, {
+        action: 'showBlocker',
+        domain: tabDomain,
+        timeSpent: 0,
+        limit: 0,
+        isFocusMode: true,
+        language: lang
+      }).catch(() => {});
+    } catch (e) {}
+  }
+}
+
+async function unblockAllTabs() {
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    if (!tab.url || !tab.url.startsWith('http')) continue;
+    chrome.tabs.sendMessage(tab.id, { action: 'hideBlocker' }).catch(() => {});
   }
 }
 
@@ -519,6 +631,22 @@ async function handleTabActivation(tabId, url) {
   if (isTrackableDomain(newDomain)) {
     if (newDomain !== currentTabInfo.domain) {
       console.log(`Switching active domain to: ${newDomain}`);
+
+      // Tab thrash detection: track switch timestamp and check if previous switch was < 15s ago
+      const now = Date.now();
+      if (lastDomainSwitchTime !== null && lastDomainBeforeSwitch && lastDomainBeforeSwitch !== newDomain) {
+        const timeSinceLastSwitch = now - lastDomainSwitchTime;
+        if (timeSinceLastSwitch < 15000) {
+          // It was a distracted switch (< 15s on previous domain before switching away)
+          const { dailyStats: ds2 = {} } = await chrome.storage.local.get(['dailyStats']);
+          if (!ds2[today]) ds2[today] = { domains: {}, hourly: Array(24).fill(0), visits: {}, totalTime: 0, sessionCount: 0 };
+          ds2[today].distractedSwitches = (ds2[today].distractedSwitches || 0) + 1;
+          await chrome.storage.local.set({ dailyStats: ds2 });
+        }
+      }
+      lastDomainBeforeSwitch = currentTabInfo.domain;
+      lastDomainSwitchTime = now;
+
       currentTabInfo.domain = newDomain;
       currentTabInfo.tabId = tabId;
       currentTabInfo.startTime = Date.now();
@@ -528,12 +656,26 @@ async function handleTabActivation(tabId, url) {
       // Create new session
       currentSession = createSession(newDomain, tabId);
 
-      // Increment visit count
-      let { dailyStats = {} } = await chrome.storage.local.get(['dailyStats']);
+      // Increment visit count + addiction tracking + first site of day
+      let { dailyStats = {}, firstSiteLog = {} } = await chrome.storage.local.get(['dailyStats', 'firstSiteLog']);
       if (!dailyStats[today]) dailyStats[today] = { domains: {}, hourly: Array(24).fill(0), visits: {}, totalTime: 0, sessionCount: 0 };
       if (!dailyStats[today].visits) dailyStats[today].visits = {};
+      if (!dailyStats[today].revisits) dailyStats[today].revisits = {};
       dailyStats[today].visits[newDomain] = (dailyStats[today].visits[newDomain] || 0) + 1;
-      await chrome.storage.local.set({ dailyStats });
+
+      // Addiction score: check if revisited within 30 minutes
+      const lastVisitTime = visitLog[newDomain];
+      if (lastVisitTime && (Date.now() - lastVisitTime) < 30 * 60 * 1000) {
+        dailyStats[today].revisits[newDomain] = (dailyStats[today].revisits[newDomain] || 0) + 1;
+      }
+      visitLog[newDomain] = Date.now();
+
+      // First site of day tracking
+      if (!firstSiteLog[today]) {
+        firstSiteLog[today] = { domain: newDomain, time: Date.now() };
+      }
+
+      await chrome.storage.local.set({ dailyStats, firstSiteLog });
     } else {
       currentTabInfo.tabId = tabId;
       if (!currentTabInfo.startTime) currentTabInfo.startTime = Date.now();
@@ -600,6 +742,115 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
     }
   }
 });
+
+// ===== Streak Management =====
+async function getStreakData() {
+  const { dailyStats = {}, goals: currentGoals = {}, streak: existingStreak } = await chrome.storage.local.get(['dailyStats', 'goals', 'streak']);
+  const streak = existingStreak || { current: 0, best: 0, lastDate: null };
+
+  const today = getYYYYMMDD();
+  const yesterday = getYYYYMMDD(new Date(Date.now() - 86400000));
+
+  // Only update streak once per day
+  if (streak.lastDate === today) {
+    return streak;
+  }
+
+  // Check if yesterday all goal-limited domains stayed under their limits
+  const yesterdayStats = dailyStats[yesterday];
+  const goalDomains = Object.keys(currentGoals).filter(d => currentGoals[d] && currentGoals[d].limit);
+
+  if (yesterdayStats && goalDomains.length > 0) {
+    const allUnderLimit = goalDomains.every(domain => {
+      const used = yesterdayStats.domains?.[domain] || 0;
+      const limit = currentGoals[domain].limit;
+      return used <= limit;
+    });
+
+    if (allUnderLimit) {
+      // Extend streak: only if last date was yesterday (consecutive)
+      if (streak.lastDate === yesterday) {
+        streak.current = (streak.current || 0) + 1;
+      } else if (!streak.lastDate) {
+        streak.current = 1;
+      } else {
+        // Streak broken (missed a day)
+        streak.current = 1;
+      }
+      streak.best = Math.max(streak.best || 0, streak.current);
+    } else {
+      // Goals not met yesterday — reset streak
+      streak.current = 0;
+    }
+  }
+
+  streak.lastDate = today;
+  await chrome.storage.local.set({ streak });
+  return streak;
+}
+
+// ===== Internet Wrapped =====
+async function getWrappedData(month) {
+  // month format: 'YYYY-MM'
+  const { dailyStats = {} } = await chrome.storage.local.get(['dailyStats']);
+
+  const domainTotals = {};
+  const hourlyTotals = Array(24).fill(0);
+  const dayTotals = {};
+  const domainRevisits = {};
+  const domainVisits = {};
+  let totalMinutes = 0;
+
+  for (const date in dailyStats) {
+    if (!date.startsWith(month)) continue;
+    const dayData = dailyStats[date];
+    const dayTotal = dayData.totalTime || Object.values(dayData.domains || {}).reduce((s, v) => s + v, 0);
+    dayTotals[date] = dayTotal;
+    totalMinutes += dayTotal;
+
+    for (const domain in (dayData.domains || {})) {
+      domainTotals[domain] = (domainTotals[domain] || 0) + dayData.domains[domain];
+    }
+    (dayData.hourly || []).forEach((v, i) => { hourlyTotals[i] += v; });
+
+    for (const domain in (dayData.revisits || {})) {
+      domainRevisits[domain] = (domainRevisits[domain] || 0) + dayData.revisits[domain];
+    }
+    for (const domain in (dayData.visits || {})) {
+      domainVisits[domain] = (domainVisits[domain] || 0) + dayData.visits[domain];
+    }
+  }
+
+  const sortedDomains = Object.entries(domainTotals).sort(([, a], [, b]) => b - a);
+  const topSite = sortedDomains[0] ? { domain: sortedDomains[0][0], minutes: sortedDomains[0][1] } : null;
+  const top5Sites = sortedDomains.slice(0, 5).map(([domain, minutes]) => ({ domain, minutes }));
+
+  const peakHour = hourlyTotals.indexOf(Math.max(...hourlyTotals));
+  const peakDay = Object.entries(dayTotals).sort(([, a], [, b]) => b - a)[0]?.[0] || null;
+
+  // Most addictive site: highest revisit rate
+  let mostAddictive = null;
+  let highestScore = 0;
+  for (const domain in domainVisits) {
+    const visits = domainVisits[domain] || 1;
+    const revisits = domainRevisits[domain] || 0;
+    const score = (revisits / visits) * 100;
+    if (score > highestScore) {
+      highestScore = score;
+      mostAddictive = { domain, score: Math.round(score) };
+    }
+  }
+
+  return {
+    month,
+    totalMinutes,
+    topSite,
+    top5Sites,
+    peakHour,
+    peakDay,
+    mostAddictive
+  };
+}
 
 // ===== Message Handling =====
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -747,6 +998,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
 
+  } else if (request.action === 'extendTimeLimit') {
+    const { domain, minutes = 15 } = request;
+    chrome.storage.local.get(['goals'], (result) => {
+      const currentGoals = result.goals || {};
+      if (currentGoals[domain]) {
+        currentGoals[domain].limit = (currentGoals[domain].limit || 0) + minutes;
+        goals = currentGoals;
+        chrome.storage.local.set({ goals: currentGoals });
+        // 쿨다운 리셋해서 다음 초과 시 다시 표시
+        delete lastBlockerTime[domain];
+        delete lastNotificationTime[domain];
+      }
+      sendResponse({ success: true });
+    });
+    return true;
+
   } else if (request.action === 'exportData') {
     chrome.storage.local.get(['tabTimes', 'dailyStats', 'goals', 'sessions'], (result) => {
       sendResponse({
@@ -761,6 +1028,65 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   } else if (request.type === 'updateUI') {
     sendResponse({ success: true, message: 'Background received UI update request.' });
+
+  } else if (request.action === 'getStreakData') {
+    getStreakData().then(streak => {
+      sendResponse({ success: true, streak });
+    }).catch(err => {
+      sendResponse({ success: false, message: err.message });
+    });
+    return true;
+
+  } else if (request.action === 'getWrappedData') {
+    const month = request.month || getYYYYMMDD().substring(0, 7);
+    getWrappedData(month).then(data => {
+      sendResponse({ success: true, data });
+    }).catch(err => {
+      sendResponse({ success: false, message: err.message });
+    });
+    return true;
+
+  } else if (request.action === 'getFirstSite') {
+    const today = getYYYYMMDD();
+    chrome.storage.local.get(['firstSiteLog'], (result) => {
+      const firstSiteLog = result.firstSiteLog || {};
+      sendResponse({ success: true, firstSite: firstSiteLog[today] || null });
+    });
+    return true;
+
+  } else if (request.action === 'startFocusMode') {
+    const { minutes = 60, domains = [] } = request;
+    focusMode.active = true;
+    focusMode.endTime = Date.now() + minutes * 60000;
+    focusMode.blockedDomains = domains;
+    chrome.alarms.clear('focusModeEnd');
+    chrome.alarms.create('focusModeEnd', { delayInMinutes: minutes });
+    chrome.storage.local.get(['language'], (res) => {
+      blockAllTabs(domains, res.language || 'ko');
+    });
+    sendResponse({ success: true, focusMode });
+    return true;
+
+  } else if (request.action === 'stopFocusMode') {
+    focusMode = { active: false, endTime: null, blockedDomains: [] };
+    chrome.alarms.clear('focusModeEnd');
+    unblockAllTabs();
+    sendResponse({ success: true });
+    return true;
+
+  } else if (request.action === 'getFocusMode') {
+    sendResponse({ success: true, focusMode });
+    return true;
+
+  } else if (request.action === 'checkFocusBlock') {
+    const { domain } = request;
+    const blocked = focusMode.active && focusMode.blockedDomains.some(d =>
+      domain.includes(d) || d.includes(domain)
+    );
+    chrome.storage.local.get(['language'], (r) => {
+      sendResponse({ blocked, language: r.language || 'ko' });
+    });
+    return true;
 
   } else if (request.action === 'openPopup') {
     console.log("Received request to open popup.");
@@ -810,7 +1136,7 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
 // ===== Statistics Calculation =====
 async function getDetailedStats() {
   console.log('Calculating detailed stats...');
-  const { dailyStats = {}, goals = {}, siteMetadata = {} } = await chrome.storage.local.get(['dailyStats', 'goals', 'siteMetadata']);
+  const { dailyStats = {}, goals = {}, siteMetadata = {}, streak = null, firstSiteLog = {} } = await chrome.storage.local.get(['dailyStats', 'goals', 'siteMetadata', 'streak', 'firstSiteLog']);
   const today = getYYYYMMDD();
   const currentMonth = today.substring(0, 7);
   const currentYear = today.substring(0, 4);
@@ -837,24 +1163,24 @@ async function getDetailedStats() {
     return { ...aggregated, firstDate };
   }
 
-  // Daily Stats - 도메인별 시간을 모든 세션에서 집계
+  // Daily Stats - dailyStats.domains 만 사용 (세션 기반 중복 집계 제거)
   const domainTotals = { ...todayStats.domains };
-  
-  // 오늘의 모든 세션에서 도메인별 시간 집계 (같은 사이트의 모든 세션 합산)
-  const todaySessions = (await chrome.storage.local.get(['sessions'])).sessions || [];
-  const todayKey = getYYYYMMDD();
-  todaySessions.forEach(session => {
-    if (session && session.domain && session.startTime) {
-      const sessionDate = new Date(session.startTime).toISOString().split('T')[0];
-      if (sessionDate === todayKey && session.duration) {
-        const sessionMinutes = session.duration / 60000;
-        domainTotals[session.domain] = (domainTotals[session.domain] || 0) + sessionMinutes;
-      }
-    }
-  });
 
   // totalTime 재계산
   const calculatedTotalTime = Object.values(domainTotals).reduce((sum, time) => sum + time, 0);
+
+  // Category breakdown
+  const categories = { work: 0, social: 0, news: 0, entertainment: 0, shopping: 0, other: 0 };
+  for (const [domain, minutes] of Object.entries(domainTotals)) {
+    const cat = getSiteCategory(domain);
+    categories[cat] = (categories[cat] || 0) + minutes;
+  }
+
+  // Yesterday's domain data for delta display
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = getDateKey(yesterday);
+  const yesterdayDomains = dailyStats[yesterdayKey]?.domains || {};
 
   const daily = {
     totalTime: calculatedTotalTime || todayStats.totalTime || 0,
@@ -863,7 +1189,12 @@ async function getDetailedStats() {
     hourlyData: todayStats.hourly.map(m => Math.round(m)),
     peakHour: findPeakHour(todayStats.hourly),
     sessionCount: todayStats.sessionCount || 0,
-    domainCount: Object.keys(domainTotals).length
+    domainCount: Object.keys(domainTotals).length,
+    distractedSwitches: todayStats.distractedSwitches || 0,
+    revisits: todayStats.revisits || {},
+    visits: todayStats.visits || {},
+    categories,
+    yesterdayDomains
   };
 
   // Weekly comparison (last 7 days)
@@ -1021,7 +1352,9 @@ async function getDetailedStats() {
     sites,
     wellness,
     dailyStats, // 전체 dailyStats 포함 (통계 뷰에서 사용)
-    monthlyAggregated // 월간 집계 데이터 (전체 통계에서 사용)
+    monthlyAggregated, // 월간 집계 데이터 (전체 통계에서 사용)
+    streak: streak || { current: 0, best: 0, lastDate: null },
+    firstSite: firstSiteLog[today] || null
   };
 }
 
@@ -1179,8 +1512,97 @@ async function cleanupOldDataIfNeeded() {
   }
 }
 
+// ===== Site Auto-Categorization =====
+function getSiteCategory(domain) {
+  const d = domain.toLowerCase().replace('www.', '');
+  const cats = {
+    work: ['github.com','gitlab.com','notion.so','figma.com','stackoverflow.com','linear.app','jira.','confluence.','zoom.us','meet.google.com','docs.google.com','sheets.google.com','slides.google.com','drive.google.com','trello.com','asana.com','slack.com','teams.microsoft.com','vercel.app','netlify.app','heroku.com','aws.amazon.com','console.cloud.google.com'],
+    social: ['twitter.com','x.com','instagram.com','facebook.com','tiktok.com','reddit.com','threads.net','discord.com','linkedin.com','tumblr.com','pinterest.com','snapchat.com','kakaotalk.com','band.us'],
+    news: ['naver.com','daum.net','news.ycombinator.com','bbc.com','cnn.com','nytimes.com','theguardian.com','yonhapnews.co.kr','chosun.com','joongang.co.kr','donga.com','hankyung.com','mk.co.kr'],
+    entertainment: ['youtube.com','netflix.com','twitch.tv','disneyplus.com','wavve.com','watcha.com','spotify.com','vimeo.com','nicovideo.jp','bilibili.com','afreecatv.com','chzzk.naver.com'],
+    shopping: ['amazon.com','coupang.com','gmarket.co.kr','auction.co.kr','11st.co.kr','musinsa.com','29cm.co.kr','kurly.com','baemin.com','yogiyo.co.kr','aliexpress.com'],
+  };
+  for (const [cat, domains] of Object.entries(cats)) {
+    if (domains.some(cd => d.includes(cd))) return cat;
+  }
+  return 'other';
+}
+
+// ===== Weekly Report =====
+async function scheduleWeeklyReport() {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon
+  const daysUntilMonday = dayOfWeek === 1 ? 7 : (8 - dayOfWeek) % 7;
+  const nextMonday = new Date(now);
+  nextMonday.setDate(now.getDate() + daysUntilMonday);
+  nextMonday.setHours(9, 0, 0, 0);
+  const minutesUntil = (nextMonday - now) / 60000;
+  chrome.alarms.create('weeklyReport', { delayInMinutes: minutesUntil });
+}
+
+async function sendWeeklyReport() {
+  const { dailyStats = {} } = await chrome.storage.local.get(['dailyStats']);
+  // Aggregate last 7 days
+  let totalMinutes = 0;
+  const domainTotals = {};
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = getDateKey(d);
+    const day = dailyStats[key];
+    if (!day) continue;
+    totalMinutes += day.totalTime || 0;
+    for (const [domain, mins] of Object.entries(day.domains || {})) {
+      domainTotals[domain] = (domainTotals[domain] || 0) + mins;
+    }
+  }
+  const topSite = Object.entries(domainTotals).sort(([,a],[,b]) => b-a)[0];
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = Math.floor(totalMinutes % 60);
+  const timeStr = hours > 0 ? `${hours}시간 ${mins}분` : `${mins}분`;
+  chrome.notifications.create('weeklyReport', {
+    type: 'basic', iconUrl: 'images/icon48.png',
+    title: '🧾 지난 주 인터넷 영수증',
+    message: `총 ${timeStr} 사용${topSite ? `. 최다 방문: ${topSite[0]}` : ''}`
+  });
+  scheduleWeeklyReport(); // schedule next week
+}
+
+// ===== Alarm Handler (Focus Mode + Weekly Report) =====
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'focusModeEnd') {
+    focusMode = { active: false, endTime: null, blockedDomains: [] };
+    unblockAllTabs();
+    chrome.notifications.create('focusModeEnd', {
+      type: 'basic', iconUrl: 'images/icon48.png',
+      title: '🎯 집중 모드 종료', message: '집중 모드가 끝났습니다. 수고하셨어요!'
+    });
+  } else if (alarm.name === 'weeklyReport') {
+    sendWeeklyReport();
+  }
+});
+
 // ===== Initialization =====
 console.log('Tab Timer Background Script: Initializing...');
+
+// Idle Detection
+chrome.idle.setDetectionInterval(60);
+chrome.idle.onStateChanged.addListener((newState) => {
+  if (newState === 'idle' || newState === 'locked') {
+    // Pause tracking - save current elapsed time then null out startTime
+    if (currentTabInfo.domain && currentTabInfo.startTime) {
+      updateActiveTabTime(); // save what we have
+      currentTabInfo.startTime = null;
+      console.log('Idle detected, pausing tracking');
+    }
+  } else if (newState === 'active') {
+    // Resume tracking
+    if (currentTabInfo.domain && !currentTabInfo.startTime) {
+      currentTabInfo.startTime = Date.now();
+      console.log('Active again, resuming tracking');
+    }
+  }
+});
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Tab Timer: Extension installed, initializing storage...');
   initializeStorage();
