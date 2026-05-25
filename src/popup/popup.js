@@ -327,6 +327,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (focusModeBtn) focusModeBtn.textContent = t('focusBtn');
     const pomoStopBtn = document.getElementById('pomoStopBtn');
     if (pomoStopBtn) pomoStopBtn.textContent = t('focusBtnActive');
+    const unit = state.currentLanguage === 'ko' ? '분' : 'm';
+    document.querySelectorAll('.pomo-preset').forEach(b => {
+      b.textContent = `${b.dataset.min}${unit}`;
+    });
+    const customPlaceholder = document.getElementById('pomoCustomMin');
+    if (customPlaceholder) customPlaceholder.placeholder = state.currentLanguage === 'ko' ? '직접' : 'min';
   }
 
   function saveDashboardAccordionState() {
