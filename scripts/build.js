@@ -43,11 +43,16 @@ if (fs.existsSync(popupJs)) {
   console.log('✓ Copied popup.js');
 }
 
-// Copy blocked.html (extension internal block page)
+// Copy blocked.html + blocked.js (extension internal block page)
 const blockedHtml = path.join(publicDir, 'blocked.html');
 if (fs.existsSync(blockedHtml)) {
   fs.copyFileSync(blockedHtml, path.join(distDir, 'blocked.html'));
   console.log('✓ Copied blocked.html');
+}
+const blockedJs = path.join(publicDir, 'blocked.js');
+if (fs.existsSync(blockedJs)) {
+  fs.copyFileSync(blockedJs, path.join(distDir, 'blocked.js'));
+  console.log('✓ Copied blocked.js');
 }
 
 // Copy public files (manifest, images)
