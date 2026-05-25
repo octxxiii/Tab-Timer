@@ -91,13 +91,13 @@ document.addEventListener('DOMContentLoaded', () => {
       firstSiteText: '오늘 첫 방문',
       distractText: '딴짓',
       distractUnit: '회',
-      // Focus mode
-      focusBtn: '집중 모드 시작',
-      focusBtnActive: '집중 모드 종료',
-      focusStartOk: '개 사이트가 차단됩니다.',
-      focusStartFail: '집중 모드 시작 실패',
-      focusStopOk: '집중 모드 종료',
-      focusStopFail: '집중 모드 종료 실패',
+      // Pomodoro
+      focusBtn: '포모도로 시작',
+      focusBtnActive: '포모도로 종료',
+      focusStartOk: '개 사이트 차단. 집중 시작!',
+      focusStartFail: '포모도로 시작 실패',
+      focusStopOk: '포모도로 종료',
+      focusStopFail: '포모도로 종료 실패',
       // Share
       shareImageOk: '이미지 저장됐어요! 어디든 공유하세요.',
       shareFail: '공유 실패. 다시 시도해주세요.',
@@ -128,10 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
       revisitTotal: '총 방문',
       revisitUnit: '회',
       // Settings
-      focusBlockTitle: '집중 모드 차단 목록',
-      focusBlockDesc: '차단할 사이트를 켜고 끄거나 직접 추가하세요',
+      focusBlockTitle: '포모도로 차단 목록',
+      focusBlockDesc: '포모도로 중 차단할 사이트를 설정하세요',
       focusBlockAdd: '추가',
-      focusBlockCustomLabel: '➕ 직접 추가',
+      focusBlockCustomLabel: '직접 추가',
       exportOk: '내보내기 완료!',
       clearConfirm: '정말 모든 데이터를 삭제할까요? 되돌릴 수 없습니다.',
       clearOk: '삭제 완료',
@@ -190,13 +190,13 @@ document.addEventListener('DOMContentLoaded', () => {
       firstSiteText: 'First site today',
       distractText: 'distractions',
       distractUnit: '',
-      // Focus mode
-      focusBtn: 'Start Focus Mode',
-      focusBtnActive: 'Stop Focus Mode',
-      focusStartOk: 'sites blocked.',
-      focusStartFail: 'Failed to start focus mode',
-      focusStopOk: 'Focus mode ended',
-      focusStopFail: 'Failed to stop focus mode',
+      // Pomodoro
+      focusBtn: 'Start Pomodoro',
+      focusBtnActive: 'Stop Pomodoro',
+      focusStartOk: 'sites blocked. Focus!',
+      focusStartFail: 'Failed to start pomodoro',
+      focusStopOk: 'Pomodoro ended',
+      focusStopFail: 'Failed to stop pomodoro',
       // Share
       shareImageOk: 'Image saved! Share it anywhere.',
       shareFail: 'Share failed. Please try again.',
@@ -227,10 +227,10 @@ document.addEventListener('DOMContentLoaded', () => {
       revisitTotal: 'Total visits',
       revisitUnit: '',
       // Settings
-      focusBlockTitle: 'Focus Mode Block List',
-      focusBlockDesc: 'Toggle sites or add your own',
+      focusBlockTitle: 'Pomodoro Block List',
+      focusBlockDesc: 'Sites blocked during pomodoro',
       focusBlockAdd: 'Add',
-      focusBlockCustomLabel: '➕ Custom',
+      focusBlockCustomLabel: 'Custom',
       exportOk: 'Export complete!',
       clearConfirm: 'Delete all data? This cannot be undone.',
       clearOk: 'Deleted',
@@ -351,7 +351,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (setBtn) setBtn.innerHTML = `<span class="material-icons-round">check</span> ${t('setBtnText')}`;
 
     const focusModeBtn = document.getElementById('focusModeBtn');
-    if (focusModeBtn && !focusModeBtn.dataset.active) focusModeBtn.textContent = t('focusBtn');
+    if (focusModeBtn) focusModeBtn.textContent = t('focusBtn');
+    const pomoStopBtn = document.getElementById('pomoStopBtn');
+    if (pomoStopBtn) pomoStopBtn.textContent = t('focusBtnActive');
   }
 
   function saveDashboardAccordionState() {
@@ -525,27 +527,81 @@ document.addEventListener('DOMContentLoaded', () => {
       }).join('');
   }
 
-  // ===== Focus Mode Widget =====
-  async function updateFocusModeBtn() {
-    const btn = document.getElementById('focusModeBtn');
+  // ===== Pomodoro Widget =====
+  let _pomoCountdownInterval = null;
+  let _pomoSelectedMin = 25; // default selection
+
+  function _pomoFormatTime(msRemaining) {
+    const totalSec = Math.max(0, Math.ceil(msRemaining / 1000));
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function _pomoClearCountdown() {
+    if (_pomoCountdownInterval) {
+      clearInterval(_pomoCountdownInterval);
+      _pomoCountdownInterval = null;
+    }
+  }
+
+  function _pomoStartCountdown(endTime) {
+    _pomoClearCountdown();
+    const el = document.getElementById('pomoCountdown');
+    if (!el) return;
+    const tick = () => {
+      const remaining = endTime - Date.now();
+      el.textContent = _pomoFormatTime(remaining);
+      if (remaining <= 0) { _pomoClearCountdown(); updateFocusModeBtn(); }
+    };
+    tick();
+    _pomoCountdownInterval = setInterval(tick, 500);
+  }
+
+  function _pomoShowActive(fm) {
+    document.getElementById('pomodoroSetup').style.display = 'none';
+    document.getElementById('pomodoroActive').style.display = 'block';
     const desc = document.getElementById('focusModeDesc');
-    if (!btn) return;
+    const ko = state.currentLanguage === 'ko';
+    if (desc) desc.textContent = ko
+      ? `${fm.blockedDomains?.length || 0}개 사이트 차단 중`
+      : `${fm.blockedDomains?.length || 0} sites blocked`;
+    const stopBtn = document.getElementById('pomoStopBtn');
+    if (stopBtn) stopBtn.textContent = t('focusBtnActive');
+    _pomoStartCountdown(fm.endTime);
+  }
+
+  function _pomoShowSetup() {
+    _pomoClearCountdown();
+    document.getElementById('pomodoroSetup').style.display = 'block';
+    document.getElementById('pomodoroActive').style.display = 'none';
+    const btn = document.getElementById('focusModeBtn');
+    if (btn) btn.textContent = t('focusBtn');
+    _pomoUpdatePresetHighlight();
+  }
+
+  function _pomoUpdatePresetHighlight() {
+    document.querySelectorAll('.pomo-preset').forEach(b => {
+      const isSelected = parseInt(b.dataset.min) === _pomoSelectedMin;
+      b.style.background = isSelected ? 'var(--accent)' : '';
+      b.style.color = isSelected ? '#fff' : '';
+      b.style.borderColor = isSelected ? 'var(--accent)' : '';
+    });
+    const custom = document.getElementById('pomoCustomMin');
+    const presets = [25, 45, 60];
+    if (custom) custom.value = presets.includes(_pomoSelectedMin) ? '' : _pomoSelectedMin;
+  }
+
+  async function updateFocusModeBtn() {
     try {
       const res = await sendMessage('getFocusMode');
       const fm = res?.focusMode;
-      if (fm?.active) {
-        const remaining = fm.endTime ? Math.max(0, Math.round((fm.endTime - Date.now()) / 60000)) : 0;
-        btn.textContent = `${t('focusBtnActive')} — ${remaining}m`;
-        btn.style.background = '#ef4444';
-        btn.onclick = stopFocusMode;
-        if (desc) desc.textContent = state.currentLanguage === 'ko' ? `${fm.blockedDomains?.length || 0}개 사이트 차단 중` : `${fm.blockedDomains?.length || 0} sites blocked`;
+      if (fm?.active && fm.endTime > Date.now()) {
+        _pomoShowActive(fm);
       } else {
-        btn.textContent = t('focusBtn');
-        btn.style.background = '';
-        btn.onclick = startFocusMode;
-        if (desc) desc.textContent = state.currentLanguage === 'ko' ? '방해 사이트를 지금 바로 전부 차단' : 'Block all distracting sites instantly';
+        _pomoShowSetup();
       }
-    } catch (e) {}
+    } catch (e) { _pomoShowSetup(); }
   }
 
   // 집중 모드 기본 차단 목록 (카테고리별)
@@ -588,9 +644,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function startFocusMode() {
+    const min = _pomoSelectedMin;
+    if (!min || min < 1) { showError(t('invalidTime')); return; }
     try {
       const domains = await getFocusBlockList();
-      const res = await sendMessage('startFocusMode', { minutes: 60, domains });
+      const res = await sendMessage('startFocusMode', { minutes: min, domains });
       if (res?.success) {
         updateFocusModeBtn();
         showSuccess(`${domains.length} ${t('focusStartOk')}`);
@@ -601,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function stopFocusMode() {
     try {
       await sendMessage('stopFocusMode');
-      updateFocusModeBtn();
+      _pomoShowSetup();
       showSuccess(t('focusStopOk'));
     } catch (e) { showError(t('focusStopFail')); }
   }
@@ -1127,12 +1185,35 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.timeLimitMinutes?.addEventListener('keypress', e => { if (e.key === 'Enter') setTimeLimit(); });
     elements.shareReceiptBtn?.addEventListener('click', shareReceipt);
 
-    // Focus mode button initial setup
-    const focusModeBtn = document.getElementById('focusModeBtn');
-    if (focusModeBtn) {
-      focusModeBtn.onclick = startFocusMode;
-      updateFocusModeBtn();
+    // Pomodoro setup
+    document.querySelectorAll('.pomo-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        _pomoSelectedMin = parseInt(btn.dataset.min);
+        const custom = document.getElementById('pomoCustomMin');
+        if (custom) custom.value = '';
+        _pomoUpdatePresetHighlight();
+      });
+    });
+    const pomoCustom = document.getElementById('pomoCustomMin');
+    if (pomoCustom) {
+      pomoCustom.addEventListener('input', () => {
+        const v = parseInt(pomoCustom.value);
+        if (v > 0) {
+          _pomoSelectedMin = v;
+          document.querySelectorAll('.pomo-preset').forEach(b => {
+            b.style.background = '';
+            b.style.color = '';
+            b.style.borderColor = '';
+          });
+        }
+      });
     }
+    const focusModeBtn = document.getElementById('focusModeBtn');
+    if (focusModeBtn) focusModeBtn.onclick = startFocusMode;
+    const pomoStopBtn = document.getElementById('pomoStopBtn');
+    if (pomoStopBtn) pomoStopBtn.onclick = stopFocusMode;
+    updateFocusModeBtn();
+    _pomoUpdatePresetHighlight();
   }
 
   async function setTimeLimit() {
