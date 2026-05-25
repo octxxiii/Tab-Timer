@@ -403,42 +403,20 @@ function isTrackableDomain(domain) {
 
 // ===== Time Limit Management =====
 function checkTimeLimits(domain, dailyTotalMinutes) {
-  // Focus mode blocking
-  if (focusMode.active && focusMode.blockedDomains.includes(domain)) {
-    showBlockerOnTab(domain, dailyTotalMinutes, 0);
-  }
-
   if (goals[domain] && goals[domain].limit !== undefined) {
     const limitInMinutes = goals[domain].limit;
     if (dailyTotalMinutes > limitInMinutes) {
       createNotification(domain, dailyTotalMinutes, limitInMinutes);
-      showBlockerOnTab(domain, dailyTotalMinutes, limitInMinutes);
     }
   }
 }
 
-function showBlockerOnTab(domain, timeSpent, limit) {
-  if (!currentTabInfo.tabId) return;
-  const now = Date.now();
-  // 5분 쿨다운 (알림과 별개 타이머)
-  if (lastBlockerTime[domain] && (now - lastBlockerTime[domain]) < 5 * 60 * 1000) return;
-  lastBlockerTime[domain] = now;
 
-  chrome.storage.local.get(['language', 'notifications'], (result) => {
-    if (result.notifications === false) return;
-    chrome.tabs.sendMessage(currentTabInfo.tabId, {
-      action: 'showBlocker',
-      domain,
-      timeSpent,
-      limit,
-      language: result.language || 'ko'
-    }).catch(() => {
-      // content script 아직 로드 안 된 탭이면 무시
-    });
-  });
+// 포모도로 차단 — blocked.html 리다이렉트 방식 (content script 불필요)
+function getBlockedUrl(domain, lang) {
+  return chrome.runtime.getURL(`blocked.html?domain=${encodeURIComponent(domain)}&lang=${lang}`);
 }
 
-// 집중 모드 블로커 — content script sendMessage 사용 (host_permissions 불필요)
 async function blockAllTabs(domains, lang) {
   const tabs = await chrome.tabs.query({});
   for (const tab of tabs) {
@@ -447,25 +425,38 @@ async function blockAllTabs(domains, lang) {
       const tabDomain = new URL(tab.url).hostname.replace(/^www\./, '');
       const isBlocked = domains.some(d => tabDomain.includes(d) || d.includes(tabDomain));
       if (!isBlocked) continue;
-      chrome.tabs.sendMessage(tab.id, {
-        action: 'showBlocker',
-        domain: tabDomain,
-        timeSpent: 0,
-        limit: 0,
-        isFocusMode: true,
-        language: lang
-      }).catch(() => {});
+      chrome.tabs.update(tab.id, { url: getBlockedUrl(tabDomain, lang) });
     } catch (e) {}
   }
 }
 
 async function unblockAllTabs() {
+  const extId = chrome.runtime.id;
   const tabs = await chrome.tabs.query({});
   for (const tab of tabs) {
-    if (!tab.url || !tab.url.startsWith('http')) continue;
-    chrome.tabs.sendMessage(tab.id, { action: 'hideBlocker' }).catch(() => {});
+    if (!tab.url || !tab.url.includes(extId) || !tab.url.includes('blocked.html')) continue;
+    chrome.tabs.goBack(tab.id).catch(() => {
+      chrome.tabs.update(tab.id, { url: 'chrome://newtab' });
+    });
   }
 }
+
+// 포모도로 진행 중 새 탭 이동 감지 → 차단
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (!focusMode.active) return;
+  if (changeInfo.status !== 'loading') return;
+  if (!tab.url || !tab.url.startsWith('http')) return;
+  const extId = chrome.runtime.id;
+  if (tab.url.includes(extId)) return; // 이미 차단 페이지
+  try {
+    const tabDomain = new URL(tab.url).hostname.replace(/^www\./, '');
+    const isBlocked = focusMode.blockedDomains.some(d => tabDomain.includes(d) || d.includes(tabDomain));
+    if (!isBlocked) return;
+    chrome.storage.local.get(['language'], (r) => {
+      chrome.tabs.update(tabId, { url: getBlockedUrl(tabDomain, r.language || 'ko') });
+    });
+  } catch (e) {}
+});
 
 function shouldShowNotification(domain) {
   const now = Date.now();
@@ -1076,16 +1067,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   } else if (request.action === 'getFocusMode') {
     sendResponse({ success: true, focusMode });
-    return true;
-
-  } else if (request.action === 'checkFocusBlock') {
-    const { domain } = request;
-    const blocked = focusMode.active && focusMode.blockedDomains.some(d =>
-      domain.includes(d) || d.includes(domain)
-    );
-    chrome.storage.local.get(['language'], (r) => {
-      sendResponse({ blocked, language: r.language || 'ko' });
-    });
     return true;
 
   } else if (request.action === 'openPopup') {

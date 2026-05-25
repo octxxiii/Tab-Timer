@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receipt — Blocked</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d0d0d;
+      color: #ccc;
+      font-family: 'Courier New', Courier, monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      background: #111;
+      border: 1px dashed #333;
+      border-radius: 4px;
+      padding: 40px 44px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+    }
+    .brand {
+      font-size: 10px;
+      letter-spacing: 4px;
+      color: #444;
+      margin-bottom: 20px;
+    }
+    .title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #fff;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .divider {
+      border: none;
+      border-top: 1px dashed #2a2a2a;
+      margin: 20px 0;
+    }
+    .domain {
+      font-size: 14px;
+      color: #ccc;
+      margin-bottom: 6px;
+    }
+    .sub {
+      font-size: 11px;
+      color: #555;
+      margin-bottom: 8px;
+    }
+    .context {
+      font-size: 11px;
+      color: #666;
+      font-style: italic;
+      line-height: 1.6;
+    }
+    .btn-back {
+      display: block;
+      width: 100%;
+      background: transparent;
+      color: #666;
+      border: 1px dashed #333;
+      padding: 12px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .btn-back:hover {
+      color: #aaa;
+      border-color: #555;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">RECEIPT</div>
+  <div class="title" id="title"></div>
+  <hr class="divider">
+  <div class="domain" id="domain"></div>
+  <div class="sub" id="sub"></div>
+  <div class="context" id="context"></div>
+  <hr class="divider">
+  <button class="btn-back" id="backBtn"></button>
+</div>
+<script>
+  const params = new URLSearchParams(location.search);
+  const domain = params.get('domain') || '';
+  const lang = params.get('lang') || 'ko';
+  const ko = lang !== 'en';
+
+  document.getElementById('title').textContent   = ko ? '포모도로 진행 중' : 'POMODORO IN PROGRESS';
+  document.getElementById('domain').textContent  = ko ? `${domain} 차단됨` : `${domain} is blocked`;
+  document.getElementById('sub').textContent     = ko ? '지금은 집중할 시간이에요' : "This isn't the time for distractions";
+  document.getElementById('context').textContent = ko ? '목표에 집중하세요. 할 수 있어요.' : 'Stay focused. You got this.';
+  document.getElementById('backBtn').textContent = ko ? '← 뒤로 가기' : '← Go back';
+
+  document.getElementById('backBtn').addEventListener('click', () => {
+    if (history.length > 1) history.back();
+    else window.close();
+  });
+</script>
+</body>
+</html>
