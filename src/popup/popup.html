@@ -380,30 +380,6 @@
       letter-spacing: 1px;
     }
 
-    /* ===== 시간 제한 섹션 ===== */
-    .limit-section {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 10px 12px;
-      margin-top: 10px;
-    }
-
-    .limit-section-title {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .limit-section-title .material-icons-round {
-      font-size: 14px;
-    }
-
     .input-group {
       display: flex;
       gap: 6px;
@@ -467,83 +443,6 @@
 
     .btn-danger:hover {
       background: #d32f2f !important;
-    }
-
-    /* 제한 아이템 */
-    .limit-item-detailed {
-      background: var(--background);
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 8px;
-      border: 1px solid var(--border);
-    }
-
-    .limit-item-detailed:last-child { margin-bottom: 0; }
-
-    .limit-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-
-    .limit-domain {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-primary);
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .limit-status {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--primary);
-      padding: 2px 8px;
-      background: rgba(33, 150, 243, 0.1);
-      border-radius: 12px;
-    }
-
-    .limit-status.over-limit {
-      color: var(--danger);
-      background: rgba(244, 67, 54, 0.1);
-    }
-
-    .limit-progress {
-      height: 6px;
-      background: var(--surface);
-      border-radius: 3px;
-      overflow: hidden;
-      margin-bottom: 6px;
-    }
-
-    .limit-progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%);
-      border-radius: 3px;
-      transition: width 0.3s ease;
-    }
-
-    .limit-item-detailed:has(.over-limit) .limit-progress-bar {
-      background: linear-gradient(90deg, var(--danger) 0%, #d32f2f 100%);
-    }
-
-    .limit-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-    }
-
-    .limit-used { color: var(--text-primary); font-weight: 500; }
-    .limit-total { color: var(--text-secondary); }
-    .limit-empty {
-      text-align: center;
-      color: var(--text-secondary);
-      font-size: 11px;
-      padding: 8px;
     }
 
     /* ===== 대시보드 뷰 ===== */
@@ -942,21 +841,6 @@
           </div>
         </div>
 
-        <!-- 시간 제한 섹션 -->
-        <div class="limit-section" style="margin-top:4px;">
-          <div class="limit-section-title">
-            <span class="material-icons-round">timer</span>
-            <span id="limitSectionTitle">Time Limits</span>
-          </div>
-          <div id="currentLimit"></div>
-          <div class="input-group">
-            <input type="number" id="timeLimitMinutes" class="input-field" min="1" placeholder="minutes">
-            <button id="setTimeLimit" class="btn-primary">
-              <span class="material-icons-round">check</span>
-              Set
-            </button>
-          </div>
-        </div>
 
       </div>
     </div>

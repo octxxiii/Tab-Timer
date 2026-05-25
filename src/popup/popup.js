@@ -8,15 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
     receiptTime: document.getElementById('receiptTime'),
     receiptTagline: document.getElementById('receiptTagline'),
     shareReceiptBtn: document.getElementById('shareReceiptBtn'),
-    currentLimit: document.getElementById('currentLimit'),
-    timeLimitMinutes: document.getElementById('timeLimitMinutes'),
-    setTimeLimit: document.getElementById('setTimeLimit'),
     themeToggle: document.getElementById('themeToggle'),
     sitesList: document.getElementById('sitesList'),
     dashboardContent: document.getElementById('dashboardContent'),
     siteDetailContent: document.getElementById('siteDetailContent'),
     siteDetailTitle: document.getElementById('siteDetailTitle'),
-    limitSectionTitle: document.getElementById('limitSectionTitle'),
     dashboardTitle: document.getElementById('dashboardTitle'),
     sitesTitle: document.getElementById('sitesTitle'),
   };
@@ -42,7 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
       tagline: '오늘의 브라우저 사용 영수증',
       shareBtn: '이 영수증 공유하기',
       shareSuccess: '클립보드에 복사됐어요! 어디든 붙여넣기 하세요.',
-      limitSectionTitle: '시간 제한',
       dashboardTitle: '통계',
       sitesTitle: '모든 사이트',
       minutesPlaceholder: '분 단위로 입력',
@@ -52,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
       overLimit: '제한 초과',
       remaining: '남음',
       used: '사용',
-      noTimeLimitSet: '설정된 시간 제한이 없습니다',
       cannotLoadData: '데이터를 불러올 수 없습니다',
       noSitesRecorded: '아직 기록된 사이트가 없습니다',
       settingsSaved: '저장되었습니다.',
@@ -102,13 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
       shareImageOk: '이미지 저장됐어요! 어디든 공유하세요.',
       shareFail: '공유 실패. 다시 시도해주세요.',
       // Time limit
-      deleteLimitConfirm: '의 시간 제한을 삭제할까요?',
-      deleteLimitOk: '삭제됐습니다.',
-      deleteLimitFail: '삭제 실패',
-      invalidTime: '올바른 시간을 입력해주세요.',
-      noTabUrl: '현재 탭 URL을 가져올 수 없습니다.',
-      limitSetOk: '시간 제한이 설정됐습니다!',
-      limitSetFail: '설정 실패',
       // Wrapped
       wrappedBtn: '이번 달 결산',
       wrappedGenerating: '생성 중...',
@@ -141,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
       tagline: 'YOUR DAILY BROWSER RECEIPT',
       shareBtn: 'SHARE THIS RECEIPT',
       shareSuccess: 'Copied to clipboard! Paste it anywhere.',
-      limitSectionTitle: 'Time Limits',
       dashboardTitle: 'Stats',
       sitesTitle: 'All Sites',
       minutesPlaceholder: 'minutes',
@@ -151,7 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
       overLimit: 'Over Limit',
       remaining: 'remaining',
       used: 'Used',
-      noTimeLimitSet: 'No time limits set',
       cannotLoadData: 'Cannot load data',
       noSitesRecorded: 'No sites recorded yet',
       settingsSaved: 'Saved.',
@@ -201,13 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
       shareImageOk: 'Image saved! Share it anywhere.',
       shareFail: 'Share failed. Please try again.',
       // Time limit
-      deleteLimitConfirm: 'Delete time limit for ',
-      deleteLimitOk: 'Deleted.',
-      deleteLimitFail: 'Delete failed',
-      invalidTime: 'Please enter a valid time.',
-      noTabUrl: 'Cannot get current tab URL.',
-      limitSetOk: 'Time limit set!',
-      limitSetFail: 'Failed to set limit',
       // Wrapped
       wrappedBtn: 'Monthly Recap',
       wrappedGenerating: 'Generating...',
@@ -342,13 +320,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.shareReceiptBtn) {
       elements.shareReceiptBtn.innerHTML = `<span class="material-icons-round">content_copy</span> ${t('shareBtn')}`;
     }
-    if (elements.limitSectionTitle) elements.limitSectionTitle.textContent = t('limitSectionTitle');
     if (elements.dashboardTitle) elements.dashboardTitle.textContent = t('dashboardTitle');
     if (elements.sitesTitle) elements.sitesTitle.textContent = t('sitesTitle');
-    if (elements.timeLimitMinutes) elements.timeLimitMinutes.placeholder = t('minutesPlaceholder');
-
-    const setBtn = elements.setTimeLimit;
-    if (setBtn) setBtn.innerHTML = `<span class="material-icons-round">check</span> ${t('setBtnText')}`;
 
     const focusModeBtn = document.getElementById('focusModeBtn');
     if (focusModeBtn) focusModeBtn.textContent = t('focusBtn');
@@ -1102,7 +1075,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       renderReceipt(response.data);
       renderCategoryBar(response.data);
-      updateTimeLimitStatus();
 
       if (state.currentView === 'sites') loadSitesList();
       else if (state.currentView === 'dashboard') loadDashboard();
@@ -1113,76 +1085,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ===== Time Limit =====
-  async function updateTimeLimitStatus() {
-    try {
-      const [limitRes, statsRes] = await Promise.all([
-        sendMessage('getTimeLimit'),
-        sendMessage('getDetailedStats')
-      ]);
-
-      if (!elements.currentLimit) return;
-
-      const domainLimits = Object.entries(limitRes?.limits || {}).filter(([d]) => d !== '_global');
-      const dailyDomains = statsRes?.data?.daily?.domains || {};
-      const currentActive = statsRes?.data?.currentActive || {};
-
-      let statusHTML = '';
-
-      domainLimits.forEach(([domain, limitData]) => {
-        const limitMinutes = limitData.limit || limitData || 0;
-        let usedMinutes = dailyDomains[domain] || 0;
-        if (currentActive.isActive && currentActive.domain === domain && currentActive.startTime) {
-          usedMinutes += (Date.now() - currentActive.startTime) / 60000;
-        }
-        const percentage = limitMinutes > 0 ? Math.min(Math.round((usedMinutes / limitMinutes) * 100), 100) : 0;
-        const remainingMinutes = Math.max(limitMinutes - usedMinutes, 0);
-        const isOverLimit = usedMinutes >= limitMinutes;
-
-        statusHTML += `
-          <div class="limit-item-detailed">
-            <div class="limit-header">
-              <span class="limit-domain">${domain}</span>
-              <span class="limit-status ${isOverLimit ? 'over-limit' : ''}">
-                ${isOverLimit ? t('overLimit') : `${formatTimeMinutes(remainingMinutes)} ${t('remaining')}`}
-              </span>
-              <button class="icon-btn" data-action="delete-limit" data-domain="${domain}" title="삭제" style="width:24px;height:24px;color:var(--danger);">
-                <span class="material-icons-round" style="font-size:14px;">delete</span>
-              </button>
-            </div>
-            <div class="limit-progress">
-              <div class="limit-progress-bar" style="width:${percentage}%"></div>
-            </div>
-            <div class="limit-info">
-              <span class="limit-used">${t('used')}: ${formatTimeMinutes(usedMinutes)}</span>
-              <span class="limit-total">/ ${formatTimeMinutes(limitMinutes)}</span>
-            </div>
-          </div>`;
-      });
-
-      if (!statusHTML) statusHTML = `<div class="limit-empty">${t('noTimeLimitSet')}</div>`;
-      elements.currentLimit.innerHTML = statusHTML;
-
-      elements.currentLimit.querySelectorAll('[data-action="delete-limit"]').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const domain = btn.getAttribute('data-domain');
-          if (domain && confirm(`${domain}${t('deleteLimitConfirm')}`)) {
-            const res = await sendMessage('removeTimeLimit', { domain });
-            if (res?.success) { showSuccess(t('deleteLimitOk')); updateTimeLimitStatus(); }
-            else showError(t('deleteLimitFail'));
-          }
-        });
-      });
-    } catch (err) {
-      console.error('시간 제한 로드 실패:', err);
-    }
-  }
-
   // ===== Event Listeners =====
   function setupEventListeners() {
     elements.themeToggle?.addEventListener('click', toggleTheme);
-    elements.setTimeLimit?.addEventListener('click', setTimeLimit);
-    elements.timeLimitMinutes?.addEventListener('keypress', e => { if (e.key === 'Enter') setTimeLimit(); });
     elements.shareReceiptBtn?.addEventListener('click', shareReceipt);
 
     // Pomodoro setup
@@ -1214,30 +1119,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (pomoStopBtn) pomoStopBtn.onclick = stopFocusMode;
     updateFocusModeBtn();
     _pomoUpdatePresetHighlight();
-  }
-
-  async function setTimeLimit() {
-    const minutes = elements.timeLimitMinutes?.value;
-    if (!minutes || minutes <= 0) { showError(t('invalidTime')); return; }
-
-    try {
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tabs[0]?.url) { showError(t('noTabUrl')); return; }
-
-      if (elements.setTimeLimit) elements.setTimeLimit.disabled = true;
-      const res = await sendMessage('setTimeLimit', { website: tabs[0].url, minutes: parseInt(minutes) });
-      if (res?.success) {
-        showSuccess(t('limitSetOk'));
-        if (elements.timeLimitMinutes) elements.timeLimitMinutes.value = '';
-        updateTimeLimitStatus();
-      } else {
-        showError(t('limitSetFail'));
-      }
-    } catch (err) {
-      showError('시간 제한 설정 실패');
-    } finally {
-      if (elements.setTimeLimit) elements.setTimeLimit.disabled = false;
-    }
   }
 
   // ===== Message =====
