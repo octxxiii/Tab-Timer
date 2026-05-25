@@ -1404,7 +1404,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const data = response.data;
       const currentActive = data.currentActive || {};
-      const allSites = { ...data.daily?.domains };
+
+      // 전체 기간 합산
+      const allSites = {};
+      Object.values(data.dailyStats || {}).forEach(day => {
+        Object.entries(day.domains || {}).forEach(([domain, time]) => {
+          allSites[domain] = (allSites[domain] || 0) + time;
+        });
+      });
 
       if (currentActive.isActive && currentActive.domain && currentActive.startTime) {
         const elapsed = (Date.now() - currentActive.startTime) / 60000;
