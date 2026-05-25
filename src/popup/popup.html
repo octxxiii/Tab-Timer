@@ -908,12 +908,13 @@
         <div id="categoryBar" style="margin:8px 0 4px;height:6px;border-radius:3px;overflow:hidden;display:flex;gap:1px;"></div>
 
         <!-- Focus Mode row -->
-        <div id="focusRow" style="display:flex;gap:6px;padding:4px 0 8px;">
-          <button id="focusModeBtn" class="btn-primary" style="flex:1;font-size:11px;padding:6px;justify-content:center;">🎯</button>
+        <div id="focusRow" style="padding:4px 0 4px;">
+          <button id="focusModeBtn" class="btn-primary" style="width:100%;font-size:11px;padding:8px;justify-content:center;letter-spacing:0.5px;"></button>
+          <div style="font-size:9px;color:var(--text-secondary);text-align:center;margin-top:3px;letter-spacing:0.3px;" id="focusModeDesc"></div>
         </div>
 
         <!-- 시간 제한 섹션 -->
-        <div class="limit-section">
+        <div class="limit-section" style="margin-top:4px;">
           <div class="limit-section-title">
             <span class="material-icons-round">timer</span>
             <span id="limitSectionTitle">Time Limits</span>

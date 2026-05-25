@@ -92,14 +92,14 @@ document.addEventListener('DOMContentLoaded', () => {
       distractText: '딴짓',
       distractUnit: '회',
       // Focus mode
-      focusBtn: '🎯 1시간 집중',
-      focusBtnActive: '🎯 집중 모드 종료',
-      focusStartOk: '개 사이트가 차단됩니다 🎯',
+      focusBtn: '집중 모드 시작',
+      focusBtnActive: '집중 모드 종료',
+      focusStartOk: '개 사이트가 차단됩니다.',
       focusStartFail: '집중 모드 시작 실패',
       focusStopOk: '집중 모드 종료',
       focusStopFail: '집중 모드 종료 실패',
       // Share
-      shareImageOk: '이미지 저장됐어요! 어디든 공유하세요 🧾',
+      shareImageOk: '이미지 저장됐어요! 어디든 공유하세요.',
       shareFail: '공유 실패. 다시 시도해주세요.',
       // Time limit
       deleteLimitConfirm: '의 시간 제한을 삭제할까요?',
@@ -110,8 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
       limitSetOk: '시간 제한이 설정됐습니다!',
       limitSetFail: '설정 실패',
       // Wrapped
-      wrappedBtn: '🗓 이번 달 결산 (Internet Wrapped)',
-      wrappedGenerating: '⏳ 생성 중...',
+      wrappedBtn: '이번 달 결산',
+      wrappedGenerating: '생성 중...',
       wrappedOk: 'Wrapped 이미지 저장됐어요!',
       wrappedNoData: '데이터를 불러올 수 없습니다.',
       wrappedFail: '생성 실패. 다시 시도해주세요.',
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
       revisitTotal: '총 방문',
       revisitUnit: '회',
       // Settings
-      focusBlockTitle: '🎯 집중 모드 차단 목록',
+      focusBlockTitle: '집중 모드 차단 목록',
       focusBlockDesc: '차단할 사이트를 켜고 끄거나 직접 추가하세요',
       focusBlockAdd: '추가',
       focusBlockCustomLabel: '➕ 직접 추가',
@@ -191,14 +191,14 @@ document.addEventListener('DOMContentLoaded', () => {
       distractText: 'distractions',
       distractUnit: '',
       // Focus mode
-      focusBtn: '🎯 1hr Focus',
-      focusBtnActive: '🎯 Stop Focus Mode',
-      focusStartOk: 'sites blocked 🎯',
+      focusBtn: 'Start Focus Mode',
+      focusBtnActive: 'Stop Focus Mode',
+      focusStartOk: 'sites blocked.',
       focusStartFail: 'Failed to start focus mode',
       focusStopOk: 'Focus mode ended',
       focusStopFail: 'Failed to stop focus mode',
       // Share
-      shareImageOk: 'Image saved! Share it anywhere 🧾',
+      shareImageOk: 'Image saved! Share it anywhere.',
       shareFail: 'Share failed. Please try again.',
       // Time limit
       deleteLimitConfirm: 'Delete time limit for ',
@@ -209,8 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
       limitSetOk: 'Time limit set!',
       limitSetFail: 'Failed to set limit',
       // Wrapped
-      wrappedBtn: '🗓 Monthly Wrapped',
-      wrappedGenerating: '⏳ Generating...',
+      wrappedBtn: 'Monthly Recap',
+      wrappedGenerating: 'Generating...',
       wrappedOk: 'Wrapped image saved!',
       wrappedNoData: 'No data available.',
       wrappedFail: 'Failed. Please try again.',
@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
       revisitTotal: 'Total visits',
       revisitUnit: '',
       // Settings
-      focusBlockTitle: '🎯 Focus Mode Block List',
+      focusBlockTitle: 'Focus Mode Block List',
       focusBlockDesc: 'Toggle sites or add your own',
       focusBlockAdd: 'Add',
       focusBlockCustomLabel: '➕ Custom',
@@ -420,7 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const streak = data.streak || {};
     if (streakEl) {
       if (streak.current > 0) {
-        streakEl.textContent = `🔥 ${streak.current} ${t('streakText')}`;
+        streakEl.textContent = `${streak.current} ${t('streakText')}`;
         streakEl.style.display = '';
       } else {
         streakEl.style.display = 'none';
@@ -431,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const firstSiteEl = document.getElementById('receiptFirstSite');
     if (firstSiteEl) {
       if (data.firstSite) {
-        firstSiteEl.textContent = `☀️ ${t('firstSiteText')}: ${data.firstSite.domain}`;
+        firstSiteEl.textContent = `${t('firstSiteText')}: ${data.firstSite.domain}`;
         firstSiteEl.style.display = '';
       } else {
         firstSiteEl.style.display = 'none';
@@ -442,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const distractEl = document.getElementById('receiptDistract');
     if (distractEl) {
       const distracted = data.daily?.distractedSwitches || 0;
-      distractEl.textContent = distracted > 0 ? `⚡ ${distracted}${t('distractUnit')} ${t('distractText')}` : '';
+      distractEl.textContent = distracted > 0 ? `${distracted}${t('distractUnit')} ${t('distractText')}` : '';
     }
 
     const daily = data.daily || {};
@@ -528,19 +528,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== Focus Mode Widget =====
   async function updateFocusModeBtn() {
     const btn = document.getElementById('focusModeBtn');
+    const desc = document.getElementById('focusModeDesc');
     if (!btn) return;
     try {
       const res = await sendMessage('getFocusMode');
       const fm = res?.focusMode;
       if (fm?.active) {
         const remaining = fm.endTime ? Math.max(0, Math.round((fm.endTime - Date.now()) / 60000)) : 0;
-        btn.textContent = `${t('focusBtnActive')} (${remaining}m)`;
+        btn.textContent = `${t('focusBtnActive')} — ${remaining}m`;
         btn.style.background = '#ef4444';
         btn.onclick = stopFocusMode;
+        if (desc) desc.textContent = state.currentLanguage === 'ko' ? `${fm.blockedDomains?.length || 0}개 사이트 차단 중` : `${fm.blockedDomains?.length || 0} sites blocked`;
       } else {
         btn.textContent = t('focusBtn');
         btn.style.background = '';
         btn.onclick = startFocusMode;
+        if (desc) desc.textContent = state.currentLanguage === 'ko' ? '방해 사이트를 지금 바로 전부 차단' : 'Block all distracting sites instantly';
       }
     } catch (e) {}
   }
@@ -590,7 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await sendMessage('startFocusMode', { minutes: 60, domains });
       if (res?.success) {
         updateFocusModeBtn();
-        showSuccess(`🎯 ${domains.length} ${t('focusStartOk')}`);
+        showSuccess(`${domains.length} ${t('focusStartOk')}`);
       }
     } catch (e) { showError(t('focusStartFail')); }
   }
@@ -764,178 +767,162 @@ document.addEventListener('DOMContentLoaded', () => {
     return canvas;
   }
 
-  // ===== Internet Wrapped Canvas =====
+  // ===== Monthly Recap Canvas (thermal receipt style) =====
   function generateWrappedCanvas(monthData) {
-    const W = 420;
-    const H = 700;
-    const scale = 2;
     const mono = '"Courier New", "Courier", monospace';
-    const sans = '"Inter", -apple-system, sans-serif';
+    const PW = 400; // paper width
+    const PAD = 32;
+    const scale = 2;
+
+    // ── measure dynamic height ──────────────────────────────
+    const top5 = monthData.top5Sites || [];
+    const hasAddictive = !!monthData.mostAddictive;
+    const hasPeakHour = monthData.peakHour !== null && monthData.peakHour !== undefined;
+    const hasPeakDay = !!monthData.peakDay;
+    const itemH = 26;
+    const H = 80 + 60 + 24 + 60 + 24 + (top5.length * itemH) + 24
+            + (hasPeakHour ? 36 : 0) + (hasAddictive ? 36 : 0) + (hasPeakDay ? 36 : 0)
+            + 60;
 
     const canvas = document.createElement('canvas');
-    canvas.width = W * scale;
+    canvas.width = PW * scale;
     canvas.height = H * scale;
     const ctx = canvas.getContext('2d');
     ctx.scale(scale, scale);
 
-    // White background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, W, H);
+    // ── background ──────────────────────────────────────────
+    ctx.fillStyle = '#f8f8f6';
+    ctx.fillRect(0, 0, PW, H);
 
-    // Top accent bar
-    ctx.fillStyle = '#2196f3';
-    ctx.fillRect(0, 0, W, 8);
+    const dash = (y2) => {
+      ctx.save();
+      ctx.strokeStyle = '#cccccc';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(PAD, y2);
+      ctx.lineTo(PW - PAD, y2);
+      ctx.stroke();
+      ctx.restore();
+    };
 
-    let y = 48;
+    let y = 0;
 
-    // Month title
+    // ── header ──────────────────────────────────────────────
+    y += 32;
+    ctx.font = `bold 10px ${mono}`;
+    ctx.fillStyle = '#999999';
+    ctx.textAlign = 'center';
+    ctx.letterSpacing = '3px';
+    ctx.fillText('RECEIPT', PW / 2, y);
+    y += 18;
+
+    ctx.font = `bold 10px ${mono}`;
+    ctx.fillStyle = '#bbbbbb';
+    ctx.letterSpacing = '1px';
+    ctx.fillText('MONTHLY RECAP', PW / 2, y);
+    y += 20;
+
+    dash(y); y += 20;
+
+    // ── month ───────────────────────────────────────────────
     const [year, mon] = (monthData.month || '').split('-');
-    const monthName = mon ? new Date(parseInt(year), parseInt(mon) - 1, 1).toLocaleString(state.currentLanguage === 'ko' ? 'ko-KR' : 'en-US', { month: 'long', year: 'numeric' }) : monthData.month;
-    ctx.font = `bold 13px ${mono}`;
-    ctx.fillStyle = '#2196f3';
+    const monthName = mon
+      ? new Date(parseInt(year), parseInt(mon) - 1, 1)
+          .toLocaleString(state.currentLanguage === 'ko' ? 'ko-KR' : 'en-US', { month: 'long', year: 'numeric' })
+          .toUpperCase()
+      : (monthData.month || '').toUpperCase();
+
+    ctx.font = `bold 20px ${mono}`;
+    ctx.fillStyle = '#111111';
+    ctx.letterSpacing = '0px';
     ctx.textAlign = 'center';
-    ctx.fillText('INTERNET WRAPPED', W / 2, y);
-    y += 22;
+    ctx.fillText(monthName, PW / 2, y + 4);
+    y += 26;
 
-    ctx.font = `bold 22px ${mono}`;
+    // ── total ───────────────────────────────────────────────
+    const totalH = Math.floor((monthData.totalMinutes || 0) / 60);
+    const totalM = Math.round((monthData.totalMinutes || 0) % 60);
+    const totalStr = totalH > 0 ? `${totalH}h ${totalM}m` : `${totalM}m`;
+
+    ctx.font = `bold 9px ${mono}`;
+    ctx.fillStyle = '#aaaaaa';
+    ctx.letterSpacing = '2px';
+    ctx.fillText('TOTAL THIS MONTH', PW / 2, y + 14);
+    y += 20;
+
+    ctx.font = `bold 44px ${mono}`;
     ctx.fillStyle = '#111111';
-    ctx.fillText(monthName.toUpperCase(), W / 2, y);
-    y += 30;
+    ctx.letterSpacing = '-1px';
+    ctx.fillText(totalStr, PW / 2, y + 32);
+    y += 42;
 
-    // Divider
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath(); ctx.moveTo(36, y); ctx.lineTo(W - 36, y); ctx.stroke();
-    ctx.setLineDash([]);
-    y += 24;
+    dash(y); y += 24;
 
-    // Total hours - big number
-    const totalHours = (monthData.totalMinutes / 60).toFixed(1);
-    ctx.font = `bold 56px ${mono}`;
-    ctx.fillStyle = '#111111';
-    ctx.textAlign = 'center';
-    ctx.fillText(totalHours, W / 2, y + 40);
-    y += 54;
-    ctx.font = `12px ${sans}`;
-    ctx.fillStyle = '#757575';
-    ctx.fillText('HOURS ONLINE THIS MONTH', W / 2, y);
-    y += 30;
-
-    // Top site
-    if (monthData.topSite) {
-      ctx.fillStyle = '#f5f5f5';
-      ctx.beginPath();
-      ctx.roundRect(36, y, W - 72, 60, 8);
-      ctx.fill();
-
-      ctx.font = `10px ${sans}`;
-      ctx.fillStyle = '#757575';
-      ctx.textAlign = 'left';
-      ctx.fillText('#1 SITE', 52, y + 16);
-
-      ctx.font = `bold 18px ${mono}`;
-      ctx.fillStyle = '#111111';
-      ctx.fillText(monthData.topSite.domain, 52, y + 38);
-
-      const topSiteTime = formatTimeShort(monthData.topSite.minutes);
-      ctx.font = `bold 14px ${mono}`;
-      ctx.fillStyle = '#2196f3';
-      ctx.textAlign = 'right';
-      ctx.fillText(topSiteTime, W - 52, y + 38);
-      y += 72;
-    }
-
-    // Top 5 bar chart
-    ctx.font = `bold 11px ${sans}`;
-    ctx.fillStyle = '#111111';
+    // ── top sites ───────────────────────────────────────────
+    ctx.font = `bold 9px ${mono}`;
+    ctx.fillStyle = '#aaaaaa';
+    ctx.letterSpacing = '2px';
     ctx.textAlign = 'left';
-    ctx.fillText('TOP SITES', 36, y);
-    y += 16;
+    ctx.fillText('TOP SITES', PAD, y);
+    y += 18;
 
-    const top5 = monthData.top5Sites || [];
-    const maxSiteTime = top5.length > 0 ? Math.max(...top5.map(s => s.minutes), 1) : 1;
-    const barAreaW = W - 72 - 70; // leave room for label and time
+    const maxM = top5.length > 0 ? Math.max(...top5.map(s => s.minutes), 1) : 1;
+    const barW = PW - PAD * 2 - 64;
+
     top5.forEach((site, i) => {
-      const label = site.domain.length > 16 ? site.domain.slice(0, 15) + '…' : site.domain;
-      const barW = Math.max((site.minutes / maxSiteTime) * barAreaW, 4);
-      const colors = ['#2196f3', '#1976d2', '#42a5f5', '#64b5f6', '#90caf9'];
-
-      ctx.font = `10px ${mono}`;
-      ctx.fillStyle = '#444444';
-      ctx.textAlign = 'left';
-      ctx.fillText(label, 36, y + 12);
-
-      ctx.fillStyle = colors[i] || '#2196f3';
-      ctx.beginPath();
-      ctx.roundRect(36, y + 16, barW, 8, 3);
-      ctx.fill();
+      const label = site.domain.length > 20 ? site.domain.slice(0, 19) + '.' : site.domain;
+      const filled = Math.max((site.minutes / maxM) * barW, 4);
 
       ctx.font = `9px ${mono}`;
-      ctx.fillStyle = '#757575';
+      ctx.fillStyle = '#333333';
+      ctx.letterSpacing = '0px';
+      ctx.textAlign = 'left';
+      ctx.fillText(label, PAD, y + 10);
+
+      ctx.fillStyle = '#dddddd';
+      ctx.fillRect(PAD, y + 14, barW, 3);
+      ctx.fillStyle = i === 0 ? '#333333' : '#888888';
+      ctx.fillRect(PAD, y + 14, filled, 3);
+
+      ctx.font = `9px ${mono}`;
+      ctx.fillStyle = '#555555';
       ctx.textAlign = 'right';
-      ctx.fillText(formatTimeShort(site.minutes), W - 36, y + 23);
-      y += 36;
+      ctx.fillText(formatTimeShort(site.minutes), PW - PAD, y + 10);
+
+      y += itemH;
     });
 
     y += 8;
+    dash(y); y += 20;
 
-    // Divider
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath(); ctx.moveTo(36, y); ctx.lineTo(W - 36, y); ctx.stroke();
-    ctx.setLineDash([]);
-    y += 20;
-
-    // Peak hour
-    if (monthData.peakHour !== null && monthData.peakHour !== undefined) {
-      ctx.font = `10px ${sans}`;
-      ctx.fillStyle = '#757575';
+    // ── stats rows ──────────────────────────────────────────
+    const row = (label, val) => {
+      ctx.font = `9px ${mono}`;
+      ctx.fillStyle = '#aaaaaa';
+      ctx.letterSpacing = '1px';
       ctx.textAlign = 'left';
-      ctx.fillText('PEAK HOUR', 36, y);
-      ctx.font = `bold 16px ${mono}`;
-      ctx.fillStyle = '#111111';
-      ctx.fillText(`${String(monthData.peakHour).padStart(2, '0')}:00`, 36, y + 18);
-      y += 36;
-    }
+      ctx.fillText(label, PAD, y);
+      ctx.font = `bold 11px ${mono}`;
+      ctx.fillStyle = '#222222';
+      ctx.letterSpacing = '0px';
+      ctx.textAlign = 'right';
+      ctx.fillText(val, PW - PAD, y);
+      y += 28;
+    };
 
-    // Most addictive site
-    if (monthData.mostAddictive) {
-      ctx.font = `10px ${sans}`;
-      ctx.fillStyle = '#757575';
-      ctx.textAlign = 'left';
-      ctx.fillText('MOST ADDICTIVE', 36, y);
-      ctx.font = `bold 16px ${mono}`;
-      ctx.fillStyle = '#f44336';
-      ctx.fillText(`${monthData.mostAddictive.domain} (${monthData.mostAddictive.score}%)`, 36, y + 18);
-      y += 36;
-    }
+    if (hasPeakHour) row('PEAK HOUR', `${String(monthData.peakHour).padStart(2,'0')}:00`);
+    if (hasPeakDay)  row('BUSIEST DAY', monthData.peakDay);
+    if (hasAddictive) row('MOST VISITED', `${monthData.mostAddictive.domain}`);
 
-    // Peak day
-    if (monthData.peakDay) {
-      ctx.font = `10px ${sans}`;
-      ctx.fillStyle = '#757575';
-      ctx.textAlign = 'left';
-      ctx.fillText('MOST ACTIVE DAY', 36, y);
-      ctx.font = `bold 16px ${mono}`;
-      ctx.fillStyle = '#111111';
-      ctx.fillText(monthData.peakDay, 36, y + 18);
-      y += 36;
-    }
+    dash(y); y += 20;
 
-    // Footer
-    ctx.fillStyle = '#f5f5f5';
-    ctx.fillRect(0, H - 40, W, 40);
-
-    ctx.font = `bold 11px ${mono}`;
-    ctx.fillStyle = '#757575';
+    // ── footer ──────────────────────────────────────────────
+    ctx.font = `9px ${mono}`;
+    ctx.fillStyle = '#cccccc';
+    ctx.letterSpacing = '1px';
     ctx.textAlign = 'center';
-    ctx.fillText('GENERATED BY RECEIPT', W / 2, H - 16);
-
-    // Bottom accent bar
-    ctx.fillStyle = '#2196f3';
-    ctx.fillRect(0, H - 4, W, 4);
+    ctx.fillText('* THANK YOU FOR YOUR TIME *', PW / 2, y + 14);
 
     return canvas;
   }
