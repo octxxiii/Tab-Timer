@@ -562,9 +562,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function _pomoUpdatePresetHighlight() {
     document.querySelectorAll('.pomo-preset').forEach(b => {
       const isSelected = parseInt(b.dataset.min) === _pomoSelectedMin;
-      b.style.background = isSelected ? 'var(--accent)' : '';
+      b.style.background = isSelected ? 'var(--primary)' : '';
       b.style.color = isSelected ? '#fff' : '';
-      b.style.borderColor = isSelected ? 'var(--accent)' : '';
+      b.style.borderColor = isSelected ? 'var(--primary)' : '';
     });
     const custom = document.getElementById('pomoCustomMin');
     const presets = [25, 45, 60];
